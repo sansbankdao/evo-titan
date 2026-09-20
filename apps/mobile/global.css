@@ -1,0 +1,4 @@
+/* apps/mobile/global.css — Evo Titan */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

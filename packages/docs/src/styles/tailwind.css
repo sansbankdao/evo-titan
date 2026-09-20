@@ -1,0 +1,5 @@
+/* packages/docs/src/styles/tailwind.css — Evo Titan */
+/* Starlight ships its own base styles, so theme + utilities are imported without
+   Tailwind's preflight to avoid resetting Starlight's component styling. */
+@import 'tailwindcss/theme.css';
+@import 'tailwindcss/utilities.css';

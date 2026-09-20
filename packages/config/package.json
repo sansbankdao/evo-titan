@@ -1,0 +1,23 @@
+{
+  "name": "@evotitan/config",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "files": ["tsconfig", "eslint", "prettier"],
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/astro.json": "./tsconfig/astro.json",
+    "./tsconfig/react-native.json": "./tsconfig/react-native.json",
+    "./tsconfig/worker.json": "./tsconfig/worker.json",
+    "./eslint/base": "./eslint/base.mjs",
+    "./eslint/astro": "./eslint/astro.mjs",
+    "./prettier": "./prettier/index.mjs"
+  },
+  "dependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-astro": "3.2.1",
+    "globals": "17.12.0",
+    "typescript-eslint": "8.70.0"
+  }
+}

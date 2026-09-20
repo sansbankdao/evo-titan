@@ -1,0 +1,5 @@
+{
+  "extends": "@evotitan/config/tsconfig/base.json",
+  "include": [],
+  "exclude": ["node_modules", "**/node_modules", "**/dist", "**/.astro", "**/.turbo"]
+}

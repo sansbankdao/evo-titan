@@ -1,0 +1,32 @@
+---
+title: Evo Titan
+description: Documentation for Evo Titan.
+template: splash
+hero:
+  tagline: Desktop, mobile and web — built with Astro, Tauri v2, React Native and Tailwind CSS.
+  actions:
+    - text: Getting started
+      link: /guides/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/sansbankdao/evo-titan
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid>
+  <Card title="Web" icon="laptop">
+    Astro static site with Tailwind CSS in `packages/web`.
+  </Card>
+  <Card title="Docs" icon="open-book">
+    Astro Starlight with Tailwind CSS in `packages/docs`.
+  </Card>
+  <Card title="Desktop" icon="setting">
+    Tauri v2 application in `apps/desktop`.
+  </Card>
+  <Card title="Mobile" icon="puzzle">
+    React Native with NativeWind in `apps/mobile`.
+  </Card>
+</CardGrid>

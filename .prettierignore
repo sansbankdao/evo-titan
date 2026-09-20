@@ -1,0 +1,11 @@
+# .prettierignore — Evo Titan
+node_modules
+dist
+build
+.output
+.astro
+.turbo
+pnpm-lock.yaml
+apps/mobile/android
+apps/mobile/ios
+apps/desktop/src-tauri/target

@@ -1,0 +1,5 @@
+{
+  "extends": ["@react-native/typescript-config", "@evotitan/config/tsconfig/react-native.json"],
+  "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts", "global.css.d.ts"],
+  "exclude": ["**/node_modules", "**/Pods"]
+}

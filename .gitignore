@@ -1,0 +1,41 @@
+# .gitignore — Evo Titan
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+.output/
+.astro/
+.turbo/
+
+# env
+.env
+.env.*
+!.env.example
+!.dev.vars.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# react-native / native
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+apps/mobile/ios/*.xcworkspace/xcuserdata/
+apps/mobile/vendor/
+
+# rust / tauri
+apps/desktop/src-tauri/target/
