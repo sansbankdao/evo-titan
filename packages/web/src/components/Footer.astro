@@ -1,0 +1,23 @@
+---
+// packages/web/src/components/Footer.astro — Evo Titan
+
+const year = new Date().getFullYear();
+---
+
+<footer class="mt-auto border-t border-slate-800/60">
+  <div
+    class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-10 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <p>© {year} Sansbank contributors. Evo Titan is pre-release software.</p>
+
+    <nav class="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Footer">
+      <a href="/docs/" class="transition hover:text-slate-300">Documentation</a>
+      <a href="/v1/health" class="transition hover:text-slate-300">API status</a>
+      <a
+        href="https://github.com/sansbankdao/evo-titan"
+        class="transition hover:text-slate-300"
+        rel="noopener noreferrer">GitHub</a
+      >
+    </nav>
+  </div>
+</footer>

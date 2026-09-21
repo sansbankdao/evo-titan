@@ -1,0 +1,31 @@
+---
+// packages/web/src/components/Downloads.astro — Evo Titan
+import DownloadCard from './DownloadCard.astro';
+import { anyPlatformAvailable, platforms } from '../config/downloads';
+---
+
+<section id="download" class="mx-auto w-full max-w-6xl scroll-mt-20 px-6 py-20">
+  <div class="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Download Evo Titan</h2>
+      <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-400">
+        Choose your platform. Binaries are signed and published from the release pipeline.
+      </p>
+    </div>
+
+    {
+      !anyPlatformAvailable && (
+        <p
+          class="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
+          data-notice="pre-release"
+        >
+          Pre-release — downloads are not live yet
+        </p>
+      )
+    }
+  </div>
+
+  <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list">
+    {platforms.map((platform) => <DownloadCard platform={platform} />)}
+  </ul>
+</section>

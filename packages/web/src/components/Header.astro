@@ -1,0 +1,54 @@
+---
+// packages/web/src/components/Header.astro — Evo Titan
+import { webApp } from '../config/downloads';
+---
+
+<header
+  class="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60"
+>
+  <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-4">
+    <a href="/" class="flex items-center gap-2.5" aria-label="Evo Titan home">
+      <img src="/favicon.svg" alt="" width="28" height="28" class="h-7 w-7" />
+      <span class="text-base font-semibold tracking-tight text-slate-100">Evo Titan</span>
+    </a>
+
+    <nav class="flex items-center gap-2 sm:gap-4" aria-label="Primary">
+      <a
+        href="/docs/"
+        class="hidden rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition hover:text-white sm:inline-block"
+      >
+        Docs
+      </a>
+      <a
+        href="https://github.com/sansbankdao/evo-titan"
+        class="hidden rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition hover:text-white sm:inline-block"
+        rel="noopener noreferrer"
+      >
+        GitHub
+      </a>
+
+      {
+        webApp.available ? (
+          <a
+            href={webApp.href}
+            data-connect
+            class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
+          >
+            {webApp.action}
+          </a>
+        ) : (
+          <span
+            data-connect
+            data-available="false"
+            aria-disabled="true"
+            title={`${webApp.name} — coming soon`}
+            class="cursor-not-allowed rounded-md border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-slate-400"
+          >
+            {webApp.action}
+            <span class="sr-only"> — coming soon</span>
+          </span>
+        )
+      }
+    </nav>
+  </div>
+</header>

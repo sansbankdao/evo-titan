@@ -1,0 +1,35 @@
+---
+// packages/web/src/components/Features.astro — Evo Titan
+
+const features = [
+  {
+    title: 'One codebase, every screen',
+    body: 'Desktop, mobile and web share the same application core, so behaviour and fixes land everywhere at once.',
+  },
+  {
+    title: 'Native where it counts',
+    body: 'Tauri v2 on desktop and bare React Native on mobile. No webview wrappers on mobile, no Electron.',
+  },
+  {
+    title: 'Open API',
+    body: 'A versioned HTTP API at evotitan.app/v1, built on Cloudflare Workers and documented alongside the app.',
+  },
+];
+---
+
+<section class="border-y border-slate-800/60 bg-slate-900/20">
+  <div class="mx-auto w-full max-w-6xl px-6 py-20">
+    <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Built for every platform</h2>
+
+    <ul class="mt-10 grid gap-9 sm:grid-cols-3" role="list">
+      {
+        features.map((feature) => (
+          <li>
+            <h3 class="text-base font-semibold text-slate-100">{feature.title}</h3>
+            <p class="mt-3 text-sm leading-relaxed text-slate-400">{feature.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
