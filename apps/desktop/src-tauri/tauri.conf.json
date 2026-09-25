@@ -5,7 +5,7 @@
   "identifier": "app.evotitan",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:4321",
+    "devUrl": "http://localhost:4327",
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build"
   },

@@ -8,9 +8,15 @@ export default defineConfig({
   // Tauri loads the static build output from src-tauri/../dist.
   output: 'static',
   server: {
-    // Tauri's devUrl is fixed at http://localhost:4321, so the dev server must
-    // always use this port. `strictPort` is a Vite option, not an Astro one.
-    port: 4321,
+    // Must match `build.devUrl` in src-tauri/tauri.conf.json exactly.
+    //
+    // This was 4321, which collided with an unrelated project that had been
+    // serving on that port for days; a bare `cargo build` + run then loaded
+    // that site inside our window because debug builds read devUrl, not the
+    // bundled frontendDist. 4327 is chosen to be out of the way of the usual
+    // Astro/Vite default. `strictPort` makes any future collision fail loudly
+    // instead of silently serving whatever else holds the port.
+    port: 4327,
   },
   vite: {
     plugins: [tailwindcss()],
