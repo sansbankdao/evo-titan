@@ -832,7 +832,7 @@ dependencies = [
 
 [[package]]
 name = "evo-titan"
-version = "0.1.0"
+version = "26.9.25"
 dependencies = [
  "log",
  "serde",

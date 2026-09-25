@@ -1,7 +1,7 @@
 {
   "name": "@evotitan/desktop",
   "private": true,
-  "version": "0.1.0",
+  "version": "26.9.25",
   "type": "module",
   "engines": {
     "node": ">=24"
