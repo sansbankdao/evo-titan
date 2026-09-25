@@ -56,6 +56,33 @@ This is a documented incident, not a preference. The port was originally 4321. A
 - Never launch `src-tauri/target/debug/evo-titan` directly against an unverified port.
 - A debug build shows `devUrl`; only a release build shows the bundled `frontendDist`. When testing the real bundle, build a release binary.
 
+## Desktop shell: window and menus
+
+The window is `label: "main"`, default **1440×900**, minimum **1024×640**, centred. The label matters: `menu.rs` resolves the window by that id.
+
+Native OS menus live in `apps/desktop/src-tauri/src/menu.rs`. Every constructor there was checked against the installed `tauri-2.11.6` source under `~/.cargo/registry/src/.../tauri-2.11.6/src/menu/`. Do the same before adding entries — do not write menu APIs from memory.
+
+Conventions that file follows, and that new entries must keep:
+
+- **Disabled, not absent, when unimplemented.** `Add node` and `Refresh fleet` mirror the fleet screen's disabled buttons and are created with `.enabled(false)`. A menu item that looks live but does nothing is worse than a greyed-out one.
+- **Unclaimed ids are reported.** `menu::handle` returns `false` for ids it does not own and `lib.rs` logs that; a typo cannot silently deaden an entry.
+- **`MENU_FEATURE` ids log loudly.** Items built with the shared placeholder id are disabled; if one ever fires, it prints that the handler is missing rather than doing nothing.
+- **Prefer predefined items.** About, quit, copy, paste, undo, select-all and friends are `muda` predefined items, so the OS supplies native behaviour, accelerators and localisation. `about_metadata()` reads the version from the crate at compile time.
+- **No shell plugin.** `open_external` spawns `xdg-open`/`open`/`cmd` directly with a compile-time-constant URL, avoiding `tauri-plugin-opener` and its capability entry.
+
+## The custodial layer (PLANNED — NOT LIVE)
+
+`custodial` in `packages/web/src/config/site.ts` is a placeholder for a future custodial entry point at **1 DASH**, waitlisted at launch, gated behind `available: false`.
+
+Rules:
+
+- **It is Rank 0, not a new Rank I.** The numbered ladder describes collateral the operator actually holds; the custodial layer is the opposite arrangement. Presenting it as a rung would imply the same ownership.
+- **Do not flip `available` to `true`** until a licensed arrangement exists. No deposit address is published and none should be.
+- **Do not invent a date.** `waitingOn` lists conditions (a licence, 1,000 DASH of pooled deposits), not a schedule.
+- **Custody is stated, never implied.** The trade-off list says we hold the collateral, the user does not hold the keys, and withdrawal depends on our liquidity. Keep that list; a page that hides the trade-off misleads.
+- **The waitlist is the only affordance**, and it is disabled with an empty `endpoint`. A placeholder URL that appears to accept a signup is worse than a disabled button, because the user believes they joined.
+- **Do not describe this as "licensing a masternode."** Dash has no masternode licensing. The mechanic is pooling deposits and operating a node on depositors' behalf. Write that, not a protocol claim.
+
 ## Verifying UI work
 
 The session runs on **Wayland**. `import` is X11-only and `grim`, `slurp`, `xdotool`, and `wmctrl` are not installed, so **a screenshot of the running window is not possible.** Do not claim a window "looks right" — that cannot be verified here.

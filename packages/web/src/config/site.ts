@@ -86,6 +86,84 @@ export const levels = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// The custodial layer — PLANNED, NOT AVAILABLE
+// ---------------------------------------------------------------------------
+
+/**
+ * A CUSTODIAL entry point that sits BELOW the numbered ranks.
+ *
+ * It is deliberately Rank 0 rather than a new Rank I: the numbered ladder
+ * describes an operator's own collateral, and this layer is a different
+ * arrangement — the operator does not hold the collateral, we do. Folding it
+ * into the ladder would imply a rung on the same staircase. It is a doorway,
+ * not a rung.
+ *
+ * NOTHING HERE IS LIVE. No deposit is accepted, no address is published, no
+ * balance is held. `available: false` gates every surface that renders it, and
+ * `waitlist` is the only thing a user can reach.
+ *
+ * The whole block is data, not copy baked into a component, so the day this
+ * ships it is enabled by flipping `available` and filling the TODO fields —
+ * rather than hunting through markup for numbers that were only ever prose.
+ */
+export const custodial = {
+  /** Flip to true ONLY when a licensed arrangement and an operator exist. */
+  available: false,
+
+  rank: '0',
+  name: 'Custodial',
+  label: 'Let us run it for you',
+
+  /** The entry threshold. Sourced from the user's decision, not the protocol. */
+  minimum: 1,
+  minimumLabel: 'from 1 DASH',
+
+  /**
+   * MOCK. One sentence, plainly stating the custody relationship. This is the
+   * claim most likely to be misread, so it is stated rather than implied: the
+   * operator does not hold the collateral.
+   */
+  body: 'Below the first rank there is a simpler way in. Instead of raising the full collateral, you deposit an amount you choose and we operate a masternode on your behalf. The collateral is held by us, not by you — which is the whole point, and also the trade-off.',
+
+  /**
+   * The honest trade-off list. Rendered as-is. Custody means giving something
+   * up, and a page that hides that is a page that misleads.
+   */
+  tradeoffs: [
+    'We hold the collateral. You hold a claim on it, not the coins.',
+    'You do not hold the node keys or the voting key.',
+    'Withdrawal depends on us having the liquidity to return your deposit.',
+  ],
+
+  /**
+   * What the layer is waiting on. Both are stated as conditions, not dates:
+   * there is no date, and inventing one would be a promise we cannot keep.
+   */
+  waitingOn: [
+    'A licensed custodial arrangement in the jurisdictions we serve.',
+    'At least 1,000 DASH of pooled deposits, the collateral for a first masternode.',
+  ],
+
+  /**
+   * MOCK. The waitlist is the ONLY reachable action. No deposit flow exists.
+   * TODO(launch): replace with a real form once the arrangement above exists.
+   */
+  waitlist: {
+    label: 'Join the waitlist',
+    available: false,
+    /**
+     * TODO(launch): set to the real endpoint. Left empty on purpose: a
+     * placeholder URL that silently accepts a signup would be worse than a
+     * disabled button, because a user would believe they had joined.
+     */
+    endpoint: '',
+  },
+
+  /** Rendered under the block so the status is never implied by layout alone. */
+  notice: 'Planned. Not open yet — no deposits are accepted and no address is published.',
+};
+
 export const journey = {
   title: 'Your first Evo node',
   note: 'Stage requirements are Dash Core v24 consensus. The ranks and names are ours.',
