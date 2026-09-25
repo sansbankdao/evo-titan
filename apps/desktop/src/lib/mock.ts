@@ -276,6 +276,161 @@ export const activity: Activity[] = [
   { id: 'a5', when: '2026-09-22T11:04:00Z', tone: 'ok', text: 'Reward of 1.86 DASH paid to evo-01' },
 ];
 
+// ---------------------------------------------------------------------------
+// CHART SERIES (MOCK)
+// ---------------------------------------------------------------------------
+
+/**
+ * MOCK. Deterministic pseudo-random in [0, 1).
+ *
+ * Deterministic on purpose: `Math.random()` would make every build produce a
+ * different chart, so two screenshots of the same commit would disagree. A
+ * seeded wobble keeps the mock stable and reproducible.
+ */
+const wobble = (i: number): number => {
+  const x = Math.sin(i * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+/** MOCK. One daily point in a time series. */
+export interface SeriesPoint {
+  /** MOCK. Calendar day, YYYY-MM-DD. */
+  date: string;
+  /** MOCK. Value in DASH. */
+  amount: number;
+}
+
+/** MOCK. The last day covered by the series below. */
+export const seriesEnd = '2026-09-25';
+
+/** MOCK. 30 days of daily reward income, oldest first. */
+export const rewardsSeries: SeriesPoint[] = Array.from({ length: 30 }, (_, i) => ({
+  date: new Date(Date.parse(`${seriesEnd}T00:00:00Z`) - (29 - i) * 86_400_000)
+    .toISOString()
+    .slice(0, 10),
+  amount: Number((0.42 + wobble(i) * 1.74).toFixed(2)),
+}));
+
+/** MOCK. Fleet health, counted for the breakdown chart. Derived from `fleet`. */
+export const healthBreakdown: { health: NodeHealth; label: string; count: number }[] = (
+  ['enabled', 'posing', 'expired', 'down'] as const
+).map((health) => ({
+  health,
+  label: { enabled: 'Enabled', posing: 'Posing', expired: 'Expired', down: 'Down' }[health],
+  count: fleet.filter((n) => n.health === health).length,
+}));
+
+/** MOCK. Collateral committed per node, for the profile bar chart. */
+export const collateralByNode = fleet.map((n) => ({
+  alias: n.alias,
+  amount: n.collateralAmount,
+  kind: n.kind,
+}));
+
+// ---------------------------------------------------------------------------
+// PROFILE (MOCK)
+// ---------------------------------------------------------------------------
+
+/** MOCK. The signed-in operator. Nothing here is fetched. */
+export const profile = {
+  displayName: 'Sansbank Operator',
+  /** MOCK. Internal handle. */
+  operatorId: 'op_7f3a9c21',
+  /** MOCK. Mirrors the public rank ladder in packages/web/src/config/site.ts. */
+  rank: 'IV',
+  rankName: 'Evo Operator',
+  /** MOCK. Date the account was created. */
+  memberSince: '2024-03-11',
+  /** MOCK. Primary payout address. */
+  payoutAddress: 'XpQ7nR4kL2mV8sT3wY6bH1cF9dG5jZ0a',
+  /** MOCK. Contact address. */
+  email: 'operator@example.invalid',
+  /** MOCK. Display region. */
+  region: 'eu-central',
+  /** MOCK. IANA zone label. */
+  timezone: 'Europe/Berlin',
+  /** MOCK. Whether two-factor auth is on. */
+  twoFactor: true,
+  /** MOCK. Sourced shape from `protocol`; values below are MOCK. */
+  totals: {
+    nodes: fleet.length,
+    collateral: fleet.reduce((sum, n) => sum + n.collateralAmount, 0),
+    rewardsAllTime: 241.7,
+    /** MOCK. Days since `memberSince`. */
+    daysActive: 928,
+  },
+};
+
+/** MOCK. A device with access to the account. */
+export interface Device {
+  id: string;
+  label: string;
+  /** MOCK. OS and version. */
+  platform: string;
+  /** MOCK. Whether this is the device you are on now. */
+  current: boolean;
+  /** MOCK. Last activity, ISO timestamp. */
+  lastActive: string;
+}
+
+/** MOCK. Authorised devices. */
+export const devices: Device[] = [
+  { id: 'd1', label: 'Sansbank workstation', platform: 'Linux 6.14', current: true, lastActive: '2026-09-25T03:41:00Z' },
+  { id: 'd2', label: 'MacBook Pro', platform: 'macOS 15.6', current: false, lastActive: '2026-09-21T17:02:00Z' },
+  { id: 'd3', label: 'Pixel 9', platform: 'Android 16', current: false, lastActive: '2026-08-30T09:14:00Z' },
+];
+
+// ---------------------------------------------------------------------------
+// SETTINGS (MOCK)
+// ---------------------------------------------------------------------------
+
+/** MOCK. gRPC/RPC connection settings. Nothing here is dialled. */
+export const rpcSettings = {
+  /** MOCK. Host. `rpc.ts` currently throws before any of this is used. */
+  host: '127.0.0.1',
+  /** Sourced default: dashd's RPC port. */
+  port: 9998,
+  /** MOCK. RPC user. */
+  user: 'operator',
+  /** MOCK. Never rendered; shown only as a set/unset state. */
+  passwordSet: true,
+  /** MOCK. Whether to use TLS. */
+  tls: false,
+  /** MOCK. Timeout in milliseconds. */
+  timeoutMs: 15_000,
+};
+
+/** MOCK. A user-facing preference toggle. */
+export interface Preference {
+  id: string;
+  label: string;
+  /** MOCK. Longer description shown under the label. */
+  help: string;
+  /** MOCK. Current value. */
+  enabled: boolean;
+  /**
+   * MOCK. Whether the control is wired to anything. The UI renders disabled
+   * controls where this is false, rather than pretending the setting applies.
+   */
+  available: boolean;
+}
+
+/** MOCK. Notification preferences. */
+export const notificationPrefs: Preference[] = [
+  { id: 'nt1', label: 'Node went down', help: 'Alert when a node stops responding to the network.', enabled: true, available: false },
+  { id: 'nt2', label: 'Node is posing', help: 'Alert when a node enters the set but lags the expected version.', enabled: true, available: false },
+  { id: 'nt3', label: 'Payment received', help: 'Alert on each masternode payment.', enabled: false, available: false },
+  { id: 'nt4', label: 'Version behind', help: 'Alert when a node falls behind the required protocol version.', enabled: true, available: false },
+];
+
+/** MOCK. Appearance and behaviour preferences. */
+export const appPrefs: Preference[] = [
+  { id: 'ap1', label: 'Launch at login', help: 'Start Evo Titan when you sign in to this computer.', enabled: false, available: false },
+  { id: 'ap2', label: 'Minimise to tray', help: 'Keep running in the background when the window is closed.', enabled: true, available: false },
+  { id: 'ap3', label: 'Confirm before signing', help: 'Always show the human-checkable code before approving a signing request.', enabled: true, available: true },
+  { id: 'ap4', label: 'Show testnet nodes', help: 'Include testnet nodes in the fleet list.', enabled: false, available: false },
+];
+
 /** MOCK. Format a DASH amount consistently. */
 export const dash = (n: number): string =>
   `${n.toLocaleString(undefined, { maximumFractionDigits: 8 })} DASH`;

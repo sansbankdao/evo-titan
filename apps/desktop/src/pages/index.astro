@@ -5,7 +5,9 @@
 // made; the RPC seam in src/lib/rpc.ts throws by design.
 import Layout from '../layouts/Layout.astro';
 import HealthBadge from '../components/HealthBadge.astro';
-import { fleet, summary, activity, dash, short } from '../lib/mock';
+import RewardsChart from '../components/RewardsChart.astro';
+import HealthChart from '../components/HealthChart.astro';
+import { fleet, summary, activity, dash, short, rewardsSeries, healthBreakdown } from '../lib/mock';
 
 const formatDuration = (seconds: number): string => {
   if (seconds <= 0) return '—';
@@ -69,6 +71,19 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
           {formatDuration(Math.min(...fleet.filter((n) => n.nextPaymentIn > 0).map((n) => n.nextPaymentIn)))}
         </p>
       </div>
+    </div>
+
+    <!--
+      Charts. Both are MOCK; see src/lib/mock.ts. The trend answers "how much
+      is this earning me" and the breakdown answers "is anything wrong", which
+      are the two questions the summary cards above only give a single number
+      for.
+    -->
+    <div class="mt-5 grid gap-3 lg:grid-cols-3">
+      <div class="lg:col-span-2">
+        <RewardsChart points={rewardsSeries} />
+      </div>
+      <HealthChart breakdown={healthBreakdown} />
     </div>
 
     <!-- Fleet table -->

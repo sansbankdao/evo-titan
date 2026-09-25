@@ -83,6 +83,31 @@ Rules:
 - **The waitlist is the only affordance**, and it is disabled with an empty `endpoint`. A placeholder URL that appears to accept a signup is worse than a disabled button, because the user believes they joined.
 - **Do not describe this as "licensing a masternode."** Dash has no masternode licensing. The mechanic is pooling deposits and operating a node on depositors' behalf. Write that, not a protocol claim.
 
+## Charting
+
+`chart.js` **4.5.1** is the charting library, a dependency of `apps/desktop` only. It was chosen because it bundles its own TypeScript types (no `@types` package) and declares **no peer dependencies**, which `strict-peer-dependencies=true` in `.npmrc` requires.
+
+- Two charts live on the start screen: `RewardsChart.astro` (line/area) and `HealthChart.astro` (doughnut).
+- Series data is passed from `mock.ts` through a `data-series` JSON attribute rather than fetched, because there is nothing to fetch from.
+- Both are created client-side in processed `<script>` tags with `chart.js/auto`. `animation: false` is deliberate: an animating chart implies live data arriving.
+- A canvas parent must own an explicit height (the components use `h-40` / `h-32`) because `maintainAspectRatio: false` otherwise collapses the canvas to zero on first paint.
+- `profile.astro` deliberately uses **inline SVG** for the collateral bars, not Chart.js: static bars with no interaction do not justify a canvas renderer.
+
+### Proving a chart renders
+
+Do not trust markup alone. A canvas element is present in the HTML whether or not any script ever ran, so presence proves nothing.
+
+`google-chrome` exists on this machine at `/usr/bin/google-chrome`. Drive it over the DevTools Protocol (Node 24 has a built-in `WebSocket`, so no dependency is needed) and read pixels back:
+
+1. Launch headless with `--remote-debugging-port`.
+2. `Page.navigate`, then **wait for `Page.loadEventFired`** before evaluating. Evaluating too early is the trap: the canvases still report the default 300×150 and zero painted pixels, which looks exactly like a broken chart.
+3. Call `getImageData` and count pixels with `alpha > 0`. Chart.js sets `width`/`height` attributes only on a successful instantiation, and a drawn chart paints thousands of pixels.
+
+Known-good result at the time of writing: `rewards-trend` 464×160 with 27,187 painted pixels; `health-breakdown` 128×128 with 6,918.
+
+Beware the related trap when grepping: a naive byte search for a string in a release binary can report a false negative, because the compiler may split a literal across separate `mov reg, imm64` immediates. Confirm by searching for the pieces (
+`<code>"Refresh "</code>` + `<code>"sh fleet"</code>`) before concluding anything is missing.
+
 ## Verifying UI work
 
 The session runs on **Wayland**. `import` is X11-only and `grim`, `slurp`, `xdotool`, and `wmctrl` are not installed, so **a screenshot of the running window is not possible.** Do not claim a window "looks right" — that cannot be verified here.

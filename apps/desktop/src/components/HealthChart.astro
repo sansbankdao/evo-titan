@@ -1,0 +1,121 @@
+---
+// apps/desktop/src/components/HealthChart.astro — Evo Titan
+//
+// MOCK DATA. Fleet health breakdown, derived from `healthBreakdown` in
+// src/lib/mock.ts, which itself counts the MOCK `fleet` array.
+import type { NodeHealth } from '../lib/mock';
+
+interface Props {
+  /** One entry per health state, with its count. */
+  breakdown: { health: NodeHealth; label: string; count: number }[];
+}
+
+const { breakdown } = Astro.props;
+
+const total = breakdown.reduce((sum, b) => sum + b.count, 0);
+
+// Colours mirror HealthBadge.astro so a state reads the same in both places.
+const colors: Record<NodeHealth, string> = {
+  enabled: '#34d399',
+  posing: '#fbbf24',
+  expired: '#fb7185',
+  down: '#64748b',
+};
+
+// Chart.js skips zero-value arcs; filtering keeps the legend in step with the
+// ring rather than showing an entry with no corresponding slice.
+const drawn = breakdown.filter((b) => b.count > 0);
+---
+
+<section
+  class="rounded-lg border border-titan-800 bg-titan-900/60 p-4"
+  data-chart="health-breakdown"
+  data-chart-mock="true"
+>
+  <div>
+    <h2 class="text-sm font-semibold text-slate-200">Fleet health</h2>
+    <p class="mt-0.5 text-[11px] text-slate-500">MOCK breakdown</p>
+  </div>
+
+  <div class="mt-3 flex items-center gap-5">
+    <div class="relative h-32 w-32 shrink-0">
+      <canvas
+        id="health-breakdown"
+        role="img"
+        aria-label={`Fleet health: ${drawn.map((b) => `${b.count} ${b.label.toLowerCase()}`).join(', ')}. Mock data.`}
+        data-series={JSON.stringify(drawn.map((b) => ({ label: b.label, value: b.count, color: colors[b.health] })))}
+      ></canvas>
+      <!--
+        The centre label is HTML, not a Chart.js plugin: drawing text inside a
+        doughnut needs the plugin API, and this is static text.
+      -->
+      <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <span class="font-mono text-xl text-slate-100">{total}</span>
+        <span class="text-[10px] text-slate-500">nodes</span>
+      </div>
+    </div>
+
+    <ul class="min-w-0 flex-1 space-y-1.5" role="list">
+      {
+        breakdown.map((b) => (
+          <li class="flex items-center gap-2 text-xs" data-health-row={b.health}>
+            <span
+              class="h-2 w-2 shrink-0 rounded-full"
+              style={`background-color: ${colors[b.health]}`}
+              aria-hidden="true"
+            />
+            <span class="text-slate-400">{b.label}</span>
+            <span class="ml-auto font-mono text-slate-300">{b.count}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<script>
+  import Chart from 'chart.js/auto';
+
+  interface Slice {
+    label: string;
+    value: number;
+    color: string;
+  }
+
+  const canvas = document.getElementById('health-breakdown') as HTMLCanvasElement | null;
+
+  if (canvas) {
+    const slices: Slice[] = JSON.parse(canvas.dataset.series ?? '[]');
+
+    new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: slices.map((s) => s.label),
+        datasets: [
+          {
+            data: slices.map((s) => s.value),
+            backgroundColor: slices.map((s) => s.color),
+            borderWidth: 0,
+            hoverOffset: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        // No animation: see RewardsChart.astro.
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            displayColors: false,
+            callbacks: {
+              label: (item) => `${item.parsed} node${item.parsed === 1 ? '' : 's'}`,
+            },
+          },
+        },
+      },
+    });
+  }
+</script>

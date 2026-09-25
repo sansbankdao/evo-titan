@@ -5,6 +5,11 @@
 // "not connected" because `rpc.ts` has no transport and no node was reachable
 // when this was written — showing "connected" would be a lie the UI tells.
 import { summary } from '../lib/mock';
+
+// Kept in step with tauri.conf.json by hand: the webview cannot read the
+// bundle version, and importing package.json into the client bundle would ship
+// the whole manifest. If the version moves, move it here too.
+const appVersion = '26.9.25';
 ---
 
 <footer
@@ -31,6 +36,6 @@ import { summary } from '../lib/mock';
       </>
     )}
     <span class="text-slate-700">·</span>
-    <span class="text-slate-600">v0.1.0</span>
+    <span class="text-slate-600">v{appVersion}</span>
   </div>
 </footer>

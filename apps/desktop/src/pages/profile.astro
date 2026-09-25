@@ -1,0 +1,188 @@
+---
+// apps/desktop/src/pages/profile.astro — Evo Titan
+//
+// The operator's own record. ALL DATA IS MOCK — see src/lib/mock.ts. Nothing on
+// this screen is fetched, and no RPC call is made.
+import Layout from '../layouts/Layout.astro';
+import { profile, devices, collateralByNode, dash, short } from '../lib/mock';
+
+// MOCK. Bar chart geometry. The chart is drawn as inline SVG rather than with
+// Chart.js because it is a static comparison with no interaction: pulling in a
+// canvas renderer for six unchangeable bars would be weight for nothing.
+const maxCollateral = Math.max(...collateralByNode.map((n) => n.amount));
+---
+
+<Layout title="Profile" active="profile">
+  <div class="mx-auto w-full max-w-6xl px-6 py-6">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-titan-500/30 bg-titan-500/10">
+        <span class="font-mono text-lg text-titan-300">SB</span>
+      </div>
+      <div class="min-w-0">
+        <h1 class="text-xl font-semibold tracking-tight text-white">
+          {profile.displayName}
+        </h1>
+        <div class="mt-0.5 flex flex-wrap items-center gap-2">
+          <span
+            class="rounded border border-titan-500/30 bg-titan-500/10 px-1.5 py-0.5 text-[10px] font-medium text-titan-300"
+            data-rank={profile.rank}
+          >
+            Rank {profile.rank} · {profile.rankName}
+          </span>
+          <span class="font-mono text-[10px] text-slate-600">{profile.operatorId}</span>
+        </div>
+      </div>
+      <div class="ml-auto flex gap-2">
+        <button
+          type="button"
+          disabled
+          class="cursor-not-allowed rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-500"
+          title="Not available yet"
+        >
+          Edit profile
+        </button>
+      </div>
+    </div>
+
+    <!-- Totals -->
+    <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-stat="nodes">
+        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Nodes</p>
+        <p class="mt-1.5 font-mono text-lg text-slate-100">{profile.totals.nodes}</p>
+      </div>
+      <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-stat="collateral">
+        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Collateral</p>
+        <p class="mt-1.5 font-mono text-lg text-slate-100">{dash(profile.totals.collateral)}</p>
+      </div>
+      <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-stat="rewards">
+        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Rewards all-time</p>
+        <p class="mt-1.5 font-mono text-lg text-slate-100">
+          {dash(profile.totals.rewardsAllTime)}
+        </p>
+      </div>
+      <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-stat="days">
+        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Days active</p>
+        <p class="mt-1.5 font-mono text-lg text-slate-100">
+          {profile.totals.daysActive.toLocaleString()}
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 lg:grid-cols-2">
+      <!-- Identity -->
+      <section class="rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="identity">
+        <h2 class="text-sm font-semibold text-slate-200">Identity</h2>
+        <dl class="mt-3 space-y-2.5 text-xs">
+          <div class="flex justify-between gap-4">
+            <dt class="text-slate-500">Email</dt>
+            <dd class="selectable truncate font-mono text-slate-300">{profile.email}</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-slate-500">Region</dt>
+            <dd class="font-mono text-slate-300">{profile.region}</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-slate-500">Timezone</dt>
+            <dd class="font-mono text-slate-300">{profile.timezone}</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-slate-500">Member since</dt>
+            <dd class="font-mono text-slate-300">{profile.memberSince}</dd>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <dt class="text-slate-500">Two-factor</dt>
+            <dd>
+              <span
+                class:list={[
+                  'rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                  profile.twoFactor
+                    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                    : 'border-slate-700 bg-slate-800/60 text-slate-400',
+                ]}
+                data-2fa={String(profile.twoFactor)}
+              >
+                {profile.twoFactor ? 'On' : 'Off'}
+              </span>
+            </dd>
+          </div>
+        </dl>
+
+        <div class="mt-4 border-t border-titan-800 pt-3">
+          <p class="text-[11px] tracking-wide text-slate-500 uppercase">Payout address</p>
+          <p
+            class="selectable mt-1 truncate font-mono text-xs text-slate-300"
+            title={profile.payoutAddress}
+          >
+            {profile.payoutAddress}
+          </p>
+        </div>
+      </section>
+
+      <!-- Collateral by node -->
+      <section class="rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="collateral">
+        <h2 class="text-sm font-semibold text-slate-200">Collateral by node</h2>
+        <p class="mt-0.5 text-[11px] text-slate-500">MOCK values in DASH</p>
+
+        <ul class="mt-3 space-y-2.5" role="list">
+          {
+            collateralByNode.map((node) => (
+              <li data-collateral-node={node.alias}>
+                <div class="flex items-baseline justify-between gap-2 text-xs">
+                  <span class="flex items-center gap-1.5">
+                    <span class="text-slate-300">{node.alias}</span>
+                    {node.kind === 'evonode' && (
+                      <span class="rounded border border-titan-500/30 bg-titan-500/10 px-1 py-px text-[9px] text-titan-300">
+                        Evo
+                      </span>
+                    )}
+                  </span>
+                  <span class="font-mono text-slate-400">
+                    {node.amount.toLocaleString()}
+                  </span>
+                </div>
+                <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-titan-950">
+                  <div
+                    class="h-full rounded-full bg-titan-500/70"
+                    style={`width: ${((node.amount / maxCollateral) * 100).toFixed(1)}%`}
+                    aria-hidden="true"
+                  />
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+    </div>
+
+    <!-- Devices -->
+    <section class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="devices">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-sm font-semibold text-slate-200">Authorised devices</h2>
+        <span class="text-[11px] text-slate-500">{devices.length} devices · MOCK</span>
+      </div>
+
+      <ul class="mt-3 divide-y divide-titan-800" role="list">
+        {
+          devices.map((device) => (
+            <li
+              class="flex flex-wrap items-center gap-3 py-2.5 text-xs"
+              data-device={device.id}
+            >
+              <span class="text-slate-300">{device.label}</span>
+              {device.current && (
+                <span class="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
+                  This device
+                </span>
+              )}
+              <span class="font-mono text-[10px] text-slate-500">{device.platform}</span>
+              <span class="ml-auto font-mono text-[10px] text-slate-600">
+                {short(device.lastActive, 10, 0)} UTC
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</Layout>

@@ -1,0 +1,50 @@
+---
+// apps/desktop/src/components/Toggle.astro — Evo Titan
+//
+// A settings switch. Imported by the Settings screen.
+//
+// When `available` is false the control renders DISABLED with a "Not wired"
+// note, matching the rule used across this app: a control that looks live but
+// changes nothing is worse than one that is plainly not connected yet.
+interface Props {
+  id: string;
+  label: string;
+  help: string;
+  enabled: boolean;
+  /** False when nothing is behind the control yet. */
+  available: boolean;
+}
+
+const { id, label, help, enabled, available } = Astro.props;
+---
+
+<div
+  class="flex items-start justify-between gap-4 border-b border-titan-800 py-3 last:border-b-0"
+  data-pref={id}
+  data-pref-available={String(available)}
+>
+  <div class="min-w-0">
+    <label for={id} class="text-sm text-slate-200" class:list={[!available && 'text-slate-400']}>
+      {label}
+    </label>
+    <p class="mt-0.5 text-[11px] leading-relaxed text-slate-500">{help}</p>
+  </div>
+
+  <div class="flex shrink-0 items-center gap-2 pt-0.5">
+    {!available && (
+      <span class="rounded border border-titan-800 px-1.5 py-0.5 text-[10px] text-slate-600">
+        Not wired
+      </span>
+    )}
+    <input
+      type="checkbox"
+      id={id}
+      checked={enabled}
+      disabled={!available}
+      class:list={[
+        'h-4 w-4 accent-titan-500',
+        available ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
+      ]}
+    />
+  </div>
+</div>
