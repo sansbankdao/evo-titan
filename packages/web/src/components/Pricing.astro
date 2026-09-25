@@ -45,7 +45,7 @@ import { tiers, paymentMethods } from '../config/site';
           <p class="mt-1 text-[11px] tracking-wide text-slate-500 uppercase">{tier.note}</p>
 
           {
-            'paymentNote' in tier && tier.paymentNote && (
+            'showPaymentMethods' in tier && tier.showPaymentMethods && (
               <ul class="mt-4 flex flex-wrap gap-2" role="list" data-notice="payment-methods">
                 {paymentMethods.map((method) => (
                   <li

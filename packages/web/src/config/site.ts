@@ -290,7 +290,11 @@ export const tiers = [
     name: 'Titan PRO',
     price: `${pricing.monthlyLabel}/mo`,
     note: 'Billed monthly',
-    paymentNote: 'Pay in DASH',
+    /**
+     * Gates the payment-method badges in Pricing.astro. The methods themselves
+     * come from `paymentMethods`; this flag only says "show them on this tier".
+     */
+    showPaymentMethods: true,
     features: [
       'AI assistant for automation and reporting',
       'Hosted API: remote metrics, remote alerts',
