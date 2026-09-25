@@ -1,0 +1,285 @@
+// apps/desktop/src/lib/mock.ts — Evo Titan
+//
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  ALL DATA IN THIS FILE IS MOCK.                                          ║
+// ║                                                                          ║
+// ║  This session is dedicated to UI/UX. No node is running, no RPC has been ║
+// ║  verified, and every value below is invented so the interface can be     ║
+// ║  designed against something concrete.                                    ║
+// ║                                                                          ║
+// ║  Protocol CONSTANTS (collateral, share bounds) are sourced from Dash Core║
+// ║  v24.0.0-rc.1 and cite their file. Everything else — node names, hashes, ║
+// ║  balances, reward amounts, dates, co-owner identities — is fabricated.   ║
+// ║                                                                          ║
+// ║  Nothing here talks to a network. `rpc.ts` is the seam where real calls  ║
+// ║  will go, and it is marked TODO: verify against dashd throughout.        ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+/** Sourced consensus constants. See `protocol` comments for file references. */
+export const protocol = {
+  /** src/evo/dmn_types.h — Regular.collat_amount = 1000 * COIN */
+  regularCollateral: 1000,
+  /** src/evo/dmn_types.h — Evo.collat_amount = 4000 * COIN */
+  evoCollateral: 4000,
+  /** src/evo/providertx.h:134-135 — MIN_SHARES{2}, MAX_SHARES{8} */
+  minShares: 2,
+  maxShares: 8,
+  /** src/evo/providertx.h:58 — CCollateralShare::MIN_AMOUNT{100 * COIN} */
+  minShareAmount: 100,
+} as const;
+
+/** MOCK. Node type as it will be reported by the node. */
+export type NodeKind = 'regular' | 'evonode';
+
+/** MOCK. Health is derived, not reported directly by dashd. */
+export type NodeHealth = 'enabled' | 'posing' | 'expired' | 'down';
+
+export interface FleetNode {
+  id: string;
+  /** MOCK. Operator-chosen label. */
+  alias: string;
+  kind: NodeKind;
+  health: NodeHealth;
+  /** MOCK. Outpoint of the collateral. */
+  collateralTxid: string;
+  collateralIndex: number;
+  /** Sourced value for the type; see `protocol`. */
+  collateralAmount: number;
+  /** MOCK. Hex, as dashd reports it. */
+  proTxHash: string;
+  /** MOCK. Human-readable address. */
+  payoutAddress: string;
+  /** MOCK. Protocol version string. */
+  version: string;
+  /** MOCK. Whether this node matches the current expected version. */
+  versionOk: boolean;
+  /** MOCK. Block height the node reports. */
+  blockHeight: number;
+  /** MOCK. Peer count. */
+  peers: number;
+  /** MOCK. Last seen, as an ISO timestamp. */
+  lastSeen: string;
+  /** MOCK. Position in the payment queue, 1-based. */
+  queuePosition: number;
+  /** MOCK. Seconds until the next expected payment. */
+  nextPaymentIn: number;
+  /** MOCK. Region label. */
+  region: string;
+  /** MOCK. Hosting provider label. */
+  provider: string;
+  /** MOCK. Share holders. Empty for a wholly owned node. */
+  shares: Share[];
+}
+
+/** MOCK. One co-owner of a shared masternode. */
+export interface Share {
+  /** MOCK. Display name for the co-owner. */
+  owner: string;
+  /** Sourced minimum per share is `protocol.minShareAmount`. */
+  amount: number;
+  /** MOCK. Whether this co-owner has returned their signature. */
+  signed: boolean;
+  /** MOCK. Truncated key identifier. */
+  keyId: string;
+}
+
+/**
+ * MOCK fleet. Deliberately mixed: a shared node, whole nodes, an evonode, and a
+ * node that is down, so every UI state has something to render.
+ */
+export const fleet: FleetNode[] = [
+  {
+    id: 'n1',
+    alias: 'titan-01',
+    kind: 'regular',
+    health: 'enabled',
+    collateralTxid: 'a3f1c9e2b74d05a8e6c1f0b93d7a2e548c6b1f0a3d9e7c2b4a8f6d1e0c3b5a79',
+    collateralIndex: 0,
+    collateralAmount: protocol.regularCollateral,
+    proTxHash: 'b7e2a1c94f0d38e6a5b2c1f7d9e0a3b8c6f4d2e1a9b7c5f3d0e8a6b4c2f1d9e7',
+    payoutAddress: 'XpQ7nR4kL2mV8sT3wY6bH1cF9dG5jZ0a',
+    version: '24.0.0',
+    versionOk: true,
+    blockHeight: 2148317,
+    peers: 42,
+    lastSeen: '2026-09-25T03:41:00Z',
+    queuePosition: 7,
+    nextPaymentIn: 93600,
+    region: 'eu-central',
+    provider: 'Self-hosted',
+    shares: [],
+  },
+  {
+    id: 'n2',
+    alias: 'shared-atlas',
+    kind: 'regular',
+    health: 'enabled',
+    collateralTxid: 'c8d2b4a6f0e13d5b7a9c2e4f6d8b0a3c5e7f9d1b3a5c7e9f0d2b4a6c8e0f1a3b',
+    collateralIndex: 1,
+    collateralAmount: protocol.regularCollateral,
+    proTxHash: 'd1f3b5a7c9e0d2b4f6a8c0e2d4b6f8a0c2e4d6b8f0a2c4e6d8b0f2a4c6e8d0b2',
+    payoutAddress: 'XkN8mQ2vL6rT9sY4bH1cF7dG3jZ5aP0w',
+    version: '24.0.0',
+    versionOk: true,
+    blockHeight: 2148317,
+    peers: 38,
+    lastSeen: '2026-09-25T03:41:12Z',
+    queuePosition: 19,
+    nextPaymentIn: 254400,
+    region: 'us-east',
+    provider: 'Self-hosted',
+    shares: [
+      { owner: 'You', amount: 600, signed: true, keyId: '8a3f...c21e' },
+      { owner: 'atlas-node', amount: 300, signed: true, keyId: '4d7b...9f02' },
+      { owner: 'meridian', amount: 100, signed: false, keyId: 'e1c9...7a45' },
+    ],
+  },
+  {
+    id: 'n3',
+    alias: 'evo-01',
+    kind: 'evonode',
+    health: 'enabled',
+    collateralTxid: 'e4a6c8b0d2f1e3a5c7b9d0f2a4c6e8b1d3f5a7c9e0b2d4f6a8c1e3b5d7f9a0c2',
+    collateralIndex: 0,
+    collateralAmount: protocol.evoCollateral,
+    proTxHash: 'f5b7d9c1e3a0f2b4d6c8e0a2f4b6d8c0e2a4f6b8d0c2e4a6f8b1d3c5e7a9f0b2',
+    payoutAddress: 'XrT4wY8bH2cF6dG1jZ9aP3kL7mQ5nV0s',
+    version: '24.0.0',
+    versionOk: true,
+    blockHeight: 2148317,
+    peers: 51,
+    lastSeen: '2026-09-25T03:41:08Z',
+    queuePosition: 3,
+    nextPaymentIn: 39600,
+    region: 'eu-central',
+    provider: 'Self-hosted',
+    shares: [],
+  },
+  {
+    id: 'n4',
+    alias: 'titan-02',
+    kind: 'regular',
+    health: 'posing',
+    collateralTxid: 'a1c3e5b7d9f0a2c4e6b8d1f3a5c7e9b0d2f4a6c8e1b3d5f7a9c0e2b4d6f8a1c3',
+    collateralIndex: 2,
+    collateralAmount: protocol.regularCollateral,
+    proTxHash: 'b2d4f6a8c0e1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f0a2c4e6b8d0f2a4c6e8b1d3',
+    payoutAddress: 'XmK5nQ9vL3rT7sY1bH4cF8dG2jZ6aP0w',
+    version: '23.1.7',
+    versionOk: false,
+    blockHeight: 2148291,
+    peers: 3,
+    lastSeen: '2026-09-25T02:58:44Z',
+    queuePosition: 0,
+    nextPaymentIn: 0,
+    region: 'ap-south',
+    provider: 'Self-hosted',
+    shares: [],
+  },
+  {
+    id: 'n5',
+    alias: 'evo-02',
+    kind: 'evonode',
+    health: 'down',
+    collateralTxid: 'c6e8a0b2d4f3c5e7a9b1d3f5a7c9e0b2d4f6a8c1e3b5d7f9a1c3e5b7d9f0a2c4',
+    collateralIndex: 0,
+    collateralAmount: protocol.evoCollateral,
+    proTxHash: 'd7f9a1c3e5b0d2f4a6c8e1b3d5f7a9c0e2b4d6f8a0c3e5b7d9f1a3c5e7b9d0f2',
+    payoutAddress: 'XpN6mQ1vL5rT8sY2bH3cF9dG4jZ7aP0w',
+    version: '24.0.0',
+    versionOk: true,
+    blockHeight: 0,
+    peers: 0,
+    lastSeen: '2026-09-24T18:12:03Z',
+    queuePosition: 0,
+    nextPaymentIn: 0,
+    region: 'ap-south',
+    provider: 'Self-hosted',
+    shares: [],
+  },
+];
+
+/** MOCK. Aggregate figures derived from the fleet above. */
+export const summary = {
+  /** MOCK total collateral across the fleet, in DASH. */
+  totalCollateral: fleet.reduce((sum, n) => sum + n.collateralAmount, 0),
+  totalNodes: fleet.length,
+  enabled: fleet.filter((n) => n.health === 'enabled').length,
+  needsAttention: fleet.filter((n) => n.health !== 'enabled').length,
+  /** MOCK. Rewards accrued this month, in DASH. */
+  rewardsThisMonth: 18.42,
+  /** MOCK. Rewards all-time, in DASH. */
+  rewardsAllTime: 241.7,
+  /** MOCK. DASH price used to express value in dollars. */
+  dashPrice: 0,
+};
+
+/** MOCK. A pending transaction awaiting co-owner signatures. */
+export interface PendingSigning {
+  id: string;
+  kind: 'ProRegTx' | 'ProDisTx' | 'ProUpServTx';
+  label: string;
+  /** MOCK. Short human-checkable code, mirroring SharedSigCollector's intent. */
+  humanCode: string;
+  required: number;
+  collected: number;
+  shares: Share[];
+}
+
+/** MOCK. One proposal in flight. */
+export const pendingSignings: PendingSigning[] = [
+  {
+    id: 's1',
+    kind: 'ProRegTx',
+    label: 'Register shared-atlas',
+    humanCode: 'ATLAS-4417',
+    required: 3,
+    collected: 2,
+    // Referenced by id rather than index: `noUncheckedIndexedAccess` treats
+    // `fleet[1]` as possibly undefined, and an index is brittle if the mock
+    // fleet is reordered.
+    shares: fleet.find((n) => n.id === 'n2')?.shares ?? [],
+  },
+];
+
+/** MOCK. A reward payment in the queue. */
+export interface RewardEvent {
+  id: string;
+  node: string;
+  amount: number;
+  when: string;
+  status: 'paid' | 'pending';
+}
+
+/** MOCK. Recent reward history. */
+export const rewards: RewardEvent[] = [
+  { id: 'r1', node: 'evo-01', amount: 1.86, when: '2026-09-22T11:04:00Z', status: 'paid' },
+  { id: 'r2', node: 'titan-01', amount: 1.42, when: '2026-09-20T07:31:00Z', status: 'paid' },
+  { id: 'r3', node: 'shared-atlas', amount: 0.24, when: '2026-09-18T19:12:00Z', status: 'paid' },
+  { id: 'r4', node: 'evo-01', amount: 1.91, when: '2026-09-15T03:47:00Z', status: 'paid' },
+];
+
+/** MOCK. Activity feed entries. */
+export interface Activity {
+  id: string;
+  when: string;
+  tone: 'ok' | 'warn' | 'info';
+  text: string;
+}
+
+/** MOCK. Recent activity. */
+export const activity: Activity[] = [
+  { id: 'a1', when: '2026-09-25T03:41:00Z', tone: 'ok', text: 'evo-01 entered the enabled set' },
+  { id: 'a2', when: '2026-09-25T02:58:00Z', tone: 'warn', text: 'titan-02 is posing — version 23.1.7 is behind' },
+  { id: 'a3', when: '2026-09-24T18:12:00Z', tone: 'warn', text: 'evo-02 stopped responding' },
+  { id: 'a4', when: '2026-09-24T09:20:00Z', tone: 'info', text: 'meridian has not yet signed shared-atlas' },
+  { id: 'a5', when: '2026-09-22T11:04:00Z', tone: 'ok', text: 'Reward of 1.86 DASH paid to evo-01' },
+];
+
+/** MOCK. Format a DASH amount consistently. */
+export const dash = (n: number): string =>
+  `${n.toLocaleString(undefined, { maximumFractionDigits: 8 })} DASH`;
+
+/** MOCK. Truncate a hex string the way a block explorer would. */
+export const short = (hex: string, head = 8, tail = 6): string =>
+  hex.length <= head + tail + 1 ? hex : `${hex.slice(0, head)}…${hex.slice(-tail)}`;

@@ -1,0 +1,45 @@
+---
+// apps/desktop/src/components/HealthBadge.astro — Evo Titan
+import type { NodeHealth } from '../lib/mock';
+
+interface Props {
+  health: NodeHealth;
+}
+
+const { health } = Astro.props;
+
+// Labels match the states a Dash node actually reports or that are derived from
+// them: `enabled`, `posing` (in the set but not responding), `expired`.
+const styles: Record<NodeHealth, { label: string; classes: string; dot: string }> = {
+  enabled: {
+    label: 'Enabled',
+    classes: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
+    dot: 'bg-emerald-400',
+  },
+  posing: {
+    label: 'Posing',
+    classes: 'border-amber-500/25 bg-amber-500/10 text-amber-300',
+    dot: 'bg-amber-400',
+  },
+  expired: {
+    label: 'Expired',
+    classes: 'border-rose-500/25 bg-rose-500/10 text-rose-300',
+    dot: 'bg-rose-400',
+  },
+  down: {
+    label: 'Down',
+    classes: 'border-slate-700 bg-slate-800/60 text-slate-400',
+    dot: 'bg-slate-500',
+  },
+};
+
+const s = styles[health];
+---
+
+<span
+  class:list={['inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium', s.classes]}
+  data-health={health}
+>
+  <span class:list={['h-1.5 w-1.5 rounded-full', s.dot]} aria-hidden="true"></span>
+  {s.label}
+</span>

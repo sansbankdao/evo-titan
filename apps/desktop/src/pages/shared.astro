@@ -1,0 +1,134 @@
+---
+// apps/desktop/src/pages/shared.astro — Evo Titan
+//
+// Shared masternode ownership. ALL DATA IS MOCK — see src/lib/mock.ts.
+//
+// The rules shown here are the ones verified from Dash Core v24.0.0-rc.1:
+//   - 2-8 shares           src/evo/providertx.h:134-135
+//   - >=100 DASH per share src/evo/providertx.h:58
+//   - shares sum to exactly the collateral
+//   - shared registration is Regular-node ONLY (providertx.cpp:280 rejects an
+//     Evo node with `bad-protx-shares-evo`)
+import Layout from '../layouts/Layout.astro';
+import { fleet, protocol, short } from '../lib/mock';
+
+const shared = fleet.filter((n) => n.shares.length > 0);
+
+// Renders a proportional bar for each share, so an uneven split is visible at a
+// glance. Widths are computed from the amounts, not hardcoded.
+const splits = shared.map((node) => {
+  const total = node.shares.reduce((sum, s) => sum + s.amount, 0);
+  return {
+    node,
+    total,
+    parts: node.shares.map((s) => ({
+      ...s,
+      pct: (s.amount / total) * 100,
+    })),
+  };
+});
+---
+
+<Layout title="Shared nodes" active="shared">
+  <div class="mx-auto w-full max-w-6xl px-6 py-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-white">Shared nodes</h1>
+        <p class="mt-1 text-sm text-slate-400">
+          {protocol.minShares}–{protocol.maxShares} co-owners per node · minimum
+          {' '}{protocol.minShareAmount} DASH per share
+        </p>
+      </div>
+      <button
+        type="button"
+        disabled
+        class="cursor-not-allowed rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-500"
+        title="Not available yet"
+      >
+        Create shared node
+      </button>
+    </div>
+
+    <div class="mt-6 space-y-4">
+      {
+        splits.map(({ node, total, parts }) => (
+          <article
+            class="overflow-hidden rounded-lg border border-titan-800"
+            data-shared-node={node.id}
+          >
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-titan-800 bg-titan-900/60 px-4 py-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-sm font-semibold text-slate-100">{node.alias}</h2>
+                  <span class="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
+                    {node.shares.length} owners
+                  </span>
+                </div>
+                <p class="selectable mt-0.5 font-mono text-[10px] text-slate-600" title={node.proTxHash}>
+                  {short(node.proTxHash)}
+                </p>
+              </div>
+              <p class="font-mono text-xs text-slate-400">
+                {total.toLocaleString()} / {node.collateralAmount.toLocaleString()} DASH
+              </p>
+            </div>
+
+            {/* Proportional split bar. */}
+            <div class="flex h-1.5 w-full" role="img" aria-label="Share distribution">
+              {parts.map((part, i) => (
+                <div
+                  class:list={[
+                    'h-full',
+                    i === 0
+                      ? 'bg-titan-500'
+                      : i === 1
+                        ? 'bg-titan-400/70'
+                        : 'bg-titan-300/50',
+                  ]}
+                  style={`width: ${part.pct}%`}
+                />
+              ))}
+            </div>
+
+            <ul class="divide-y divide-titan-800" role="list">
+              {parts.map((part) => (
+                <li
+                  class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-xs"
+                  data-coowner={part.owner}
+                >
+                  <span class="w-28 shrink-0 truncate font-medium text-slate-200">{part.owner}</span>
+                  <span class="font-mono text-slate-300">{part.amount.toLocaleString()} DASH</span>
+                  <span class="font-mono text-[10px] text-slate-600">{part.pct.toFixed(1)}%</span>
+                  <span class="selectable font-mono text-[10px] text-slate-600" title={part.keyId}>
+                    {part.keyId}
+                  </span>
+                  <span
+                    class:list={[
+                      'ml-auto inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                      part.signed
+                        ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                        : 'border-amber-500/25 bg-amber-500/10 text-amber-300',
+                    ]}
+                    data-signed={part.signed ? 'true' : 'false'}
+                  >
+                    {part.signed ? 'Signed' : 'Awaiting signature'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div class="border-t border-titan-800 bg-titan-950/60 px-4 py-2 text-[10px] text-slate-600">
+              Shares must total exactly {(node.collateralAmount).toLocaleString()} DASH. Shared
+              collateral cannot register an Evo node.
+            </div>
+          </article>
+        ))
+      }
+    </div>
+
+    <p class="mt-6 text-[11px] leading-relaxed text-slate-600">
+      MOCK DATA. The share rules above are Dash Core v24 consensus and sourced; the owners,
+      amounts and keys are invented.
+    </p>
+  </div>
+</Layout>

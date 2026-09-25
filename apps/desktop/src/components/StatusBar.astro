@@ -1,0 +1,36 @@
+---
+// apps/desktop/src/components/StatusBar.astro — Evo Titan
+//
+// Bottom chrome. Every value is MOCK. The connection indicator is hardcoded to
+// "not connected" because `rpc.ts` has no transport and no node was reachable
+// when this was written — showing "connected" would be a lie the UI tells.
+import { summary } from '../lib/mock';
+---
+
+<footer
+  class="flex shrink-0 items-center justify-between gap-4 border-t border-titan-800 bg-titan-900 px-4 py-1.5 text-[11px] text-slate-500"
+  data-notice="status-bar"
+>
+  <div class="flex items-center gap-4">
+    <span class="flex items-center gap-1.5">
+      <span class="h-1.5 w-1.5 rounded-full bg-slate-600" aria-hidden="true"></span>
+      <span>No node connected</span>
+    </span>
+    <span class="text-slate-700">·</span>
+    <span>RPC not implemented</span>
+  </div>
+
+  <div class="flex items-center gap-4">
+    <span>{summary.totalNodes} nodes</span>
+    <span class="text-slate-700">·</span>
+    <span>{summary.enabled} enabled</span>
+    {summary.needsAttention > 0 && (
+      <>
+        <span class="text-slate-700">·</span>
+        <span class="text-amber-400/80">{summary.needsAttention} need attention</span>
+      </>
+    )}
+    <span class="text-slate-700">·</span>
+    <span class="text-slate-600">v0.1.0</span>
+  </div>
+</footer>

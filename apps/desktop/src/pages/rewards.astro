@@ -1,0 +1,93 @@
+---
+// apps/desktop/src/pages/rewards.astro — Evo Titan
+//
+// Rewards. ALL DATA IS MOCK — see src/lib/mock.ts.
+import Layout from '../layouts/Layout.astro';
+import { rewards, summary, fleet, dash } from '../lib/mock';
+
+// Bar chart of reward history. Scaled to the largest value so the tallest bar
+// always fills the plot, which keeps the shape readable at any range.
+const max = Math.max(...rewards.map((r) => r.amount));
+const bars = [...rewards].reverse();
+
+const monthly = [
+  { month: 'Jun', amount: 15.2 },
+  { month: 'Jul', amount: 16.8 },
+  { month: 'Aug', amount: 17.4 },
+  { month: 'Sep', amount: summary.rewardsThisMonth },
+];
+const monthlyMax = Math.max(...monthly.map((m) => m.amount));
+---
+
+<Layout title="Rewards" active="rewards">
+  <div class="mx-auto w-full max-w-5xl px-6 py-6">
+    <h1 class="text-xl font-semibold tracking-tight text-white">Rewards</h1>
+    <p class="mt-1 text-sm text-slate-400">Payment history across the fleet.</p>
+
+    <div class="mt-5 grid gap-3 sm:grid-cols-3">
+      <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+        <p class="text-[11px] tracking-wide text-slate-500 uppercase">This month</p>
+        <p class="mt-1.5 font-mono text-lg text-slate-100">{dash(summary.rewardsThisMonth)}</p>
+      </div>
+      <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+        <p class="text-[11px] tracking-wide text-slate-500 uppercase">All-time</p>
+        <p class="mt-1.5 font-mono text-lg text-slate-100">{dash(summary.rewardsAllTime)}</p>
+      </div>
+      <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Average per payment</p>
+        <p class="mt-1.5 font-mono text-lg text-slate-100">
+          {dash(rewards.reduce((s, r) => s + r.amount, 0) / rewards.length)}
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 lg:grid-cols-2">
+      <!-- Monthly -->
+      <div class="rounded-lg border border-titan-800 bg-titan-900/40 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">By month</h2>
+        <div class="mt-4 flex h-36 items-end gap-3" role="img" aria-label="Rewards by month">
+          {
+            monthly.map((m) => (
+              <div class="flex flex-1 flex-col items-center gap-2" data-month={m.month}>
+                <span class="font-mono text-[10px] text-slate-500">{m.amount.toFixed(1)}</span>
+                <div
+                  class="w-full rounded-t bg-titan-500/70"
+                  style={`height: ${(m.amount / monthlyMax) * 100}%`}
+                />
+                <span class="text-[10px] text-slate-500">{m.month}</span>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- Recent -->
+      <div class="rounded-lg border border-titan-800 bg-titan-900/40 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Recent payments</h2>
+        <ul class="mt-3 space-y-2" role="list">
+          {
+            bars.map((r) => (
+              <li class="flex items-center gap-3 text-xs" data-reward={r.id}>
+                <span class="w-24 shrink-0 truncate font-medium text-slate-300">{r.node}</span>
+                <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-titan-800">
+                  <div class="h-full rounded-full bg-titan-400/70" style={`width: ${(r.amount / max) * 100}%`} />
+                </div>
+                <span class="w-16 shrink-0 text-right font-mono text-slate-300">
+                  {r.amount.toFixed(2)}
+                </span>
+                <span class="w-20 shrink-0 text-right font-mono text-[10px] text-slate-600">
+                  {r.when.slice(5, 10)}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+
+    <p class="mt-6 text-[11px] leading-relaxed text-slate-600">
+      MOCK DATA. Reward amounts, dates and history are fabricated. {fleet.length} nodes are shown
+      on the fleet screen.
+    </p>
+  </div>
+</Layout>

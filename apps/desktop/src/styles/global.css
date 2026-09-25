@@ -1,2 +1,56 @@
 /* apps/desktop/src/styles/global.css — Evo Titan */
 @import 'tailwindcss';
+
+/*
+ * The desktop window is a fixed piece of furniture, not a scrolling web page.
+ * The shell fills the viewport and only the content area scrolls, so the
+ * sidebar and status bar stay put.
+ */
+@theme {
+  --color-titan-950: oklch(0.13 0.028 264);
+  --color-titan-900: oklch(0.17 0.03 264);
+  --color-titan-800: oklch(0.24 0.032 264);
+  --color-titan-700: oklch(0.32 0.034 264);
+  --color-titan-500: oklch(0.58 0.16 274);
+  --color-titan-400: oklch(0.68 0.16 274);
+  --color-titan-300: oklch(0.78 0.12 274);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/* A desktop app should not feel like a document: no text selection on chrome,
+   and a restrained scrollbar that matches the dark shell. */
+body {
+  overflow: hidden;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-titan-700) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-titan-700);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Allow selection where it is genuinely useful: values an operator may want to
+   copy, such as a ProTx hash or an address. */
+.selectable {
+  user-select: text;
+  cursor: text;
+}

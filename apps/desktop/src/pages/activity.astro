@@ -1,0 +1,45 @@
+---
+// apps/desktop/src/pages/activity.astro — Evo Titan
+//
+// Full activity log. ALL DATA IS MOCK — see src/lib/mock.ts.
+import Layout from '../layouts/Layout.astro';
+import { activity } from '../lib/mock';
+
+const tones = {
+  ok: { dot: 'bg-emerald-400', label: 'OK' },
+  warn: { dot: 'bg-amber-400', label: 'Attention' },
+  info: { dot: 'bg-slate-500', label: 'Info' },
+} as const;
+---
+
+<Layout title="Activity" active="activity">
+  <div class="mx-auto w-full max-w-3xl px-6 py-6">
+    <h1 class="text-xl font-semibold tracking-tight text-white">Activity</h1>
+    <p class="mt-1 text-sm text-slate-400">Everything the fleet has reported.</p>
+
+    <ol class="mt-6 space-y-1" role="list">
+      {
+        activity.map((entry) => (
+          <li
+            class="flex items-start gap-3 rounded-md px-3 py-2.5 hover:bg-titan-900/40"
+            data-activity={entry.id}
+          >
+            <span
+              class:list={['mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full', tones[entry.tone].dot]}
+              aria-hidden="true"
+            />
+            <div class="min-w-0 flex-1">
+              <p class="text-sm text-slate-300">{entry.text}</p>
+              <p class="selectable mt-0.5 font-mono text-[10px] text-slate-600">{entry.when}</p>
+            </div>
+            <span class="mt-0.5 shrink-0 text-[10px] text-slate-600">{tones[entry.tone].label}</span>
+          </li>
+        ))
+      }
+    </ol>
+
+    <p class="mt-6 text-[11px] leading-relaxed text-slate-600">
+      MOCK DATA. This log is fabricated and is not read from a node.
+    </p>
+  </div>
+</Layout>

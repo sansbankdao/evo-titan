@@ -1,12 +1,17 @@
 ---
 // apps/desktop/src/layouts/Layout.astro — Evo Titan
 import '../styles/global.css';
+import Sidebar from '../components/Sidebar.astro';
+import StatusBar from '../components/StatusBar.astro';
+import { summary } from '../lib/mock';
 
 interface Props {
   title: string;
+  /** Which sidebar entry is active. */
+  active?: string;
 }
 
-const { title } = Astro.props;
+const { title, active } = Astro.props;
 ---
 
 <!doctype html>
@@ -16,9 +21,31 @@ const { title } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title}</title>
+    <title>{title} — Evo Titan</title>
   </head>
-  <body class="flex min-h-full flex-col bg-slate-950 text-slate-100 select-none">
-    <slot />
+  <body class="flex h-full flex-col overflow-hidden bg-titan-950 text-slate-100 select-none">
+    <!--
+      MOCK DATA BANNER. This session is UI/UX only; nothing on screen comes
+      from a node. The banner is deliberately loud and cannot be dismissed, so
+      a screenshot can never be mistaken for real fleet data.
+    -->
+    <div
+      class="flex shrink-0 items-center justify-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-[11px] font-medium text-amber-300"
+      data-notice="mock-data"
+    >
+      <span class="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true"></span>
+      MOCK DATA — no node connected. All figures are fabricated for UI/UX.
+    </div>
+
+    <div class="flex min-h-0 flex-1">
+      <Sidebar active={active} needsAttention={summary.needsAttention} />
+
+      <div class="flex min-w-0 flex-1 flex-col">
+        <main class="min-h-0 flex-1 overflow-y-auto">
+          <slot />
+        </main>
+        <StatusBar />
+      </div>
+    </div>
   </body>
 </html>

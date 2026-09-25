@@ -50,18 +50,49 @@ export const protocol = {
 // ---------------------------------------------------------------------------
 
 /**
- * Evo Titan's own positioning language, NOT a Dash protocol term. "Cluster"
- * appears nowhere in Dash Core v24.0.0-rc.1: a tree-wide grep returns only
- * unrelated fuzz-test fixtures under src/immer. Where we say "cluster" we mean
- * many evonodes in one enterprise setup — our word for it, not the protocol's.
- * The stage REQUIREMENTS are consensus and sourced; the labels are ours.
+ * Evo Titan's OWN rank ladder. NONE of these names are Dash protocol terms:
+ * "cluster" appears nowhere in Dash Core v24.0.0-rc.1 (a tree-wide grep returns
+ * only unrelated fuzz fixtures under src/immer), and neither does any rank name
+ * below. The REQUIREMENTS are consensus and sourced; the ranks are our
+ * positioning language. The top rank is the product's namesake: run enough
+ * evonodes and you are an Evo Titan.
  */
+export const levels = [
+  {
+    rank: 'I',
+    name: 'Shareholder',
+    requirement: `from ${protocol.minShareAmount} DASH`,
+  },
+  {
+    rank: 'II',
+    name: 'Operator',
+    requirement: `${protocol.regularCollateral.toLocaleString()} DASH`,
+  },
+  {
+    rank: 'III',
+    name: 'Fleet Operator',
+    requirement: 'n × 1,000 DASH',
+  },
+  {
+    rank: 'IV',
+    name: 'Evo Operator',
+    requirement: `${protocol.evoCollateral.toLocaleString()} DASH`,
+  },
+  {
+    rank: 'V',
+    name: 'Evo Titan',
+    requirement: 'n × 4,000 DASH',
+    titan: true,
+  },
+];
+
 export const journey = {
   title: 'Your first Evo node',
-  note: 'Stage requirements are Dash Core v24 consensus. The naming is ours.',
+  note: 'Stage requirements are Dash Core v24 consensus. The ranks and names are ours.',
   stages: [
     {
       id: 'share',
+      rank: 'I',
       step: '01',
       label: 'Take a share',
       amount: `from ${protocol.minShareAmount} DASH`,
@@ -69,6 +100,7 @@ export const journey = {
     },
     {
       id: 'whole',
+      rank: 'II',
       step: '02',
       label: 'Own a whole masternode',
       amount: `${protocol.regularCollateral.toLocaleString()} DASH`,
@@ -76,6 +108,7 @@ export const journey = {
     },
     {
       id: 'many',
+      rank: 'III',
       step: '03',
       label: 'Run many',
       amount: 'n × 1,000 DASH',
@@ -83,17 +116,19 @@ export const journey = {
     },
     {
       id: 'evonode',
+      rank: 'IV',
       step: '04',
       label: 'Your first Evo node',
       amount: `${protocol.evoCollateral.toLocaleString()} DASH`,
       body: 'Step up to an evonode, which carries four times the voting weight of a regular masternode. It is registered whole, by one owner — shared collateral cannot be used for an evonode.',
     },
     {
-      id: 'cluster',
+      id: 'titan',
+      rank: 'V',
       step: '05',
-      label: 'Then a cluster',
+      label: 'Evo Titan',
       amount: 'n × 4,000 DASH',
-      body: 'Run many evonodes as one enterprise setup: a cluster of high-weight nodes under a single console.',
+      body: 'This is the rank the product is named for. Run many evonodes as one enterprise setup — a fleet of high-weight nodes under a single console — and you are an Evo Titan.',
     },
   ],
 };
@@ -193,49 +228,44 @@ export const steps = [
 // ---------------------------------------------------------------------------
 
 /**
- * Titan PRO pricing is DECIDED (not mock): $5.00/month, 30% off when paid in
- * Dash USDC. The discounted figure is DERIVED, never hardcoded, so the two can
- * not drift apart.
+ * Titan PRO pricing is DECIDED (not mock): $5.00/month, paid in DASH. An
+ * earlier 30%-off-for-USDC idea was REMOVED on the user's instruction.
  *
- * The Dash USDC discount is not yet chargeable: Dash USDC does not exist. It is
- * announced for the coming months. See `paymentProvider` for the state of
- * crypto checkout.
+ * Payments are limited to the two assets our audience holds. No third-party
+ * processor. `paymentMethods` records what is chargeable today.
  *
  * Standing constraint, not a mock: no tier gates access to a user's own keys or
  * their ability to sign. A lapsed subscription must never lock an operator out
  * of their own collateral.
  */
 const PRO_PRICE_MONTHLY = 5;
-const USDC_DISCOUNT = 0.3;
 
-/** Prices are formatted to 2 decimals so "$3.50" never renders as "$3.5". */
+/** Prices are formatted to 2 decimals so "$5.00" never renders as "$5". */
 const money = (n: number): string => `$${n.toFixed(2)}`;
 
 export const pricing = {
+  /** Priced in USD, settled in DASH or (later) Dash USDC. */
   currency: 'USD',
   monthly: PRO_PRICE_MONTHLY,
   monthlyLabel: money(PRO_PRICE_MONTHLY),
-  usdcDiscountPercent: USDC_DISCOUNT * 100,
-  monthlyWithUsdc: Number((PRO_PRICE_MONTHLY * (1 - USDC_DISCOUNT)).toFixed(2)),
-  monthlyWithUsdcLabel: money(PRO_PRICE_MONTHLY * (1 - USDC_DISCOUNT)),
-  savingPerMonth: Number((PRO_PRICE_MONTHLY * USDC_DISCOUNT).toFixed(2)),
-  savingPerMonthLabel: money(PRO_PRICE_MONTHLY * USDC_DISCOUNT),
 };
 
 /**
- * Payment provider research. NOWPayments advertises 300+ currencies; its public
- * `/v1/currencies` endpoint (fetched, no key required) returns 203 and DOES
- * include `dash` and `usdc` (plus usdcbase, usdcarb, usdcmatic, usdcsol and
- * others). It does NOT include a USDC token on the Dash chain, because Dash USDC
- * does not exist yet. No integration has been implemented.
+ * Payment methods are LIMITED to DASH and Dash USDC, at the user's direction
+ * ("our audience are Dash MNOs"). NOWPayments was dropped entirely.
+ *
+ * Dash USDC does not exist yet — it is announced for the coming months — so its
+ * entry is `available: false` and nothing renders a payable link for it.
  */
-export const paymentProvider = {
-  candidate: 'NOWPayments',
-  dashSupported: true,
-  usdcSupported: true,
-  usdcOnDashChain: false,
-  integrated: false,
-};
+export const paymentMethods = [
+  { id: 'dash', label: 'DASH', available: true, note: 'Pay from the wallet you already run' },
+  {
+    id: 'usdc',
+    label: 'Dash USDC',
+    available: false,
+    note: 'Coming soon — Dash USDC is announced but not live',
+  },
+];
 
 /**
  * MOCK feature list for the tiers. Pricing is real; the feature wording is not.
@@ -260,13 +290,7 @@ export const tiers = [
     name: 'Titan PRO',
     price: `${pricing.monthlyLabel}/mo`,
     note: 'Billed monthly',
-    /** Rendered as a badge beside the price. Dash USDC is not live yet. */
-    discount: {
-      percent: pricing.usdcDiscountPercent,
-      price: `${pricing.monthlyWithUsdcLabel}/mo`,
-      label: `Pay with Dash USDC and save ${pricing.usdcDiscountPercent}%`,
-      pending: true,
-    },
+    paymentNote: 'Pay in DASH',
     features: [
       'AI assistant for automation and reporting',
       'Hosted API: remote metrics, remote alerts',

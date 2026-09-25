@@ -1,0 +1,66 @@
+---
+// apps/desktop/src/components/Sidebar.astro — Evo Titan
+//
+// Navigation chrome. The item list is static; the only dynamic value is the
+// attention badge, which is MOCK and comes from `mock.ts` via Layout.
+interface Props {
+  active?: string;
+  needsAttention: number;
+}
+
+const { active = 'fleet', needsAttention } = Astro.props;
+
+const items = [
+  { id: 'fleet', label: 'Fleet', href: '/' },
+  { id: 'shared', label: 'Shared nodes', href: '/shared' },
+  { id: 'signing', label: 'Signing', href: '/signing' },
+  { id: 'rewards', label: 'Rewards', href: '/rewards' },
+  { id: 'activity', label: 'Activity', href: '/activity' },
+];
+---
+
+<aside class="flex w-56 shrink-0 flex-col border-r border-titan-800 bg-titan-900">
+  <div class="flex items-center gap-2.5 px-4 py-4">
+    <img src="/favicon.svg" alt="" width="26" height="26" class="h-[26px] w-[26px]" />
+    <span class="text-sm font-semibold tracking-tight text-white">Evo Titan</span>
+  </div>
+
+  <nav class="flex flex-1 flex-col gap-0.5 px-2" aria-label="Primary">
+    {
+      items.map((item) => {
+        const isActive = item.id === active;
+        return (
+          <a
+            href={item.href}
+            aria-current={isActive ? 'page' : undefined}
+            class:list={[
+              'flex items-center justify-between rounded-md px-3 py-2 text-sm transition',
+              isActive
+                ? 'bg-titan-800 font-medium text-white'
+                : 'text-slate-400 hover:bg-titan-800/50 hover:text-slate-200',
+            ]}
+            data-nav={item.id}
+          >
+            <span>{item.label}</span>
+            {item.id === 'fleet' && needsAttention > 0 && (
+              <span
+                class="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
+                title={`${needsAttention} node(s) need attention`}
+              >
+                {needsAttention}
+              </span>
+            )}
+          </a>
+        );
+      })
+    }
+  </nav>
+
+  <div class="border-t border-titan-800 p-3">
+    <div class="rounded-md bg-titan-950/60 px-3 py-2.5">
+      <p class="text-[10px] tracking-wide text-slate-500 uppercase">Plan</p>
+      <p class="mt-0.5 text-sm font-medium text-slate-300">Operator</p>
+      <p class="mt-1 text-[10px] text-slate-600">Free forever</p>
+    </div>
+  </div>
+</aside>
