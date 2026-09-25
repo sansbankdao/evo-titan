@@ -1,0 +1,147 @@
+---
+// packages/web/src/components/ConsoleMockup.astro — Evo Titan
+//
+// MOCK GRAPHIC. A hand-drawn SVG illustration standing in for a real product
+// screenshot. Every node name, address, height and figure is invented sample
+// data. Replace with a genuine capture when the application exists.
+
+// MOCK: co-owner signature collection state, mirroring the share model in
+// Dash Core v24 (2-8 shares, unanimous dissolution).
+const shares = [
+  { name: 'You', key: 'a91f…c3d2', amount: 600, signed: true, you: true },
+  { name: 'Co-owner 2', key: '7be4…1a08', amount: 300, signed: true, you: false },
+  { name: 'Co-owner 3', key: 'f02c…9d71', amount: 100, signed: false, you: false },
+];
+
+const total = shares.reduce((sum, s) => sum + s.amount, 0);
+const signedCount = shares.filter((s) => s.signed).length;
+
+// MOCK fleet rows.
+const nodes = [
+  { name: 'mn-fra-01', type: 'Regular', height: '2,184,502', status: 'enabled', peers: 48 },
+  { name: 'mn-ams-02', type: 'Shared', height: '2,184,502', status: 'enabled', peers: 51 },
+  { name: 'evo-sg-03', type: 'Evo', height: '2,184,498', status: 'lagging', peers: 12 },
+  { name: 'mn-nyc-04', type: 'Shared', height: '2,184,502', status: 'enabled', peers: 46 },
+];
+
+const statusStyles: Record<string, string> = {
+  enabled: 'bg-emerald-400',
+  lagging: 'bg-amber-400',
+};
+
+const typeStyles: Record<string, string> = {
+  Regular: 'text-slate-400 bg-slate-500/10 border-slate-500/25',
+  Shared: 'text-indigo-300 bg-indigo-500/10 border-indigo-500/25',
+  Evo: 'text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/25',
+};
+---
+
+<figure class="relative" data-mock="console">
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute -inset-6 rounded-3xl bg-[radial-gradient(50%_50%_at_50%_50%,rgba(99,102,241,0.22),transparent_70%)] blur-2xl"
+  >
+  </div>
+
+  <div
+    class="relative overflow-hidden rounded-xl border border-slate-700/70 bg-slate-900/80 shadow-2xl shadow-indigo-950/40 backdrop-blur"
+  >
+    <!-- Window chrome. -->
+    <div class="flex items-center gap-2 border-b border-slate-700/60 bg-slate-950/60 px-4 py-3">
+      <span class="h-2.5 w-2.5 rounded-full bg-rose-500/70" aria-hidden="true"></span>
+      <span class="h-2.5 w-2.5 rounded-full bg-amber-400/70" aria-hidden="true"></span>
+      <span class="h-2.5 w-2.5 rounded-full bg-emerald-400/70" aria-hidden="true"></span>
+      <span class="ml-3 font-mono text-xs text-slate-500">evo-titan — shared masternode</span>
+      <span
+        class="ml-auto rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-amber-300 uppercase"
+        >Mock</span
+      >
+    </div>
+
+    <!-- Signature collection panel: the headline feature. -->
+    <div class="border-b border-slate-700/50 px-4 py-4">
+      <div class="flex items-center justify-between">
+        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Collect signatures</p>
+        <p class="font-mono text-[11px]">
+          <span class={signedCount === shares.length ? 'text-emerald-300' : 'text-amber-300'}>
+            {signedCount}/{shares.length}
+          </span>
+          <span class="text-slate-600"> signed</span>
+        </p>
+      </div>
+
+      <ul class="mt-3 space-y-2" role="list">
+        {
+          shares.map((share) => (
+            <li class="flex items-center gap-3">
+              <span
+                class={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[10px] ${
+                  share.signed
+                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                    : 'border-slate-600 bg-slate-800/60 text-slate-600'
+                }`}
+                aria-hidden="true"
+              >
+                {share.signed ? '✓' : ''}
+              </span>
+              <span class="w-24 shrink-0 truncate text-xs text-slate-300">
+                {share.name}
+              </span>
+              <span class="hidden w-28 shrink-0 font-mono text-[10px] text-slate-600 sm:inline">
+                {share.key}
+              </span>
+              <span class="ml-auto font-mono text-xs text-slate-400">
+                {share.amount}
+                <span class="text-slate-600"> DASH</span>
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+
+      <div class="mt-3 flex items-center justify-between border-t border-slate-800/60 pt-3">
+        <p class="font-mono text-[10px] text-slate-600">collateral = 1,000 DASH (consensus)</p>
+        <p class="font-mono text-xs text-slate-300">{total} DASH</p>
+      </div>
+    </div>
+
+    <!-- Fleet table. -->
+    <table class="w-full text-left font-mono text-xs">
+      <thead class="text-[10px] tracking-wide text-slate-500 uppercase">
+        <tr class="border-b border-slate-700/50">
+          <th scope="col" class="px-4 py-2 font-medium">Node</th>
+          <th scope="col" class="hidden px-4 py-2 font-medium sm:table-cell">Type</th>
+          <th scope="col" class="hidden px-4 py-2 font-medium sm:table-cell">Peers</th>
+          <th scope="col" class="px-4 py-2 font-medium">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          nodes.map((node) => (
+            <tr class="border-b border-slate-800/50 last:border-0">
+              <td class="px-4 py-2.5">
+                <span class="flex items-center gap-2">
+                  <span class={`h-1.5 w-1.5 shrink-0 rounded-full ${statusStyles[node.status]}`} aria-hidden="true" />
+                  <span class="text-slate-300">{node.name}</span>
+                </span>
+                <span class="mt-0.5 block pl-3.5 text-[10px] text-slate-600 sm:hidden">{node.type}</span>
+              </td>
+              <td class="hidden px-4 py-2.5 sm:table-cell">
+                <span class={`rounded border px-1.5 py-0.5 text-[10px] ${typeStyles[node.type]}`}>{node.type}</span>
+              </td>
+              <td class="hidden px-4 py-2.5 text-slate-400 sm:table-cell">{node.peers}</td>
+              <td class="px-4 py-2.5 text-slate-400">{node.status}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <figcaption class="sr-only">
+    Mock illustration of the Evo Titan shared masternode signature collection and fleet view. All
+    co-owner names, keys, node names, addresses and figures are invented sample data, not a real
+    product screenshot. The 1,000 DASH regular collateral and the 2–8 share range are Dash Core
+    v24 consensus values.
+  </figcaption>
+</figure>

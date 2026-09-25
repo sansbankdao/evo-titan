@@ -1,0 +1,73 @@
+---
+// packages/web/src/components/Pricing.astro — Evo Titan
+//
+// MOCK PRICING. Tier names, prices and feature lists are placeholders.
+// Deliberate constraint: no tier gates access to the user's own keys, and no
+// tier is required to sign or to recover collateral.
+import { tiers } from '../config/site';
+---
+
+<section id="pricing" class="mx-auto w-full max-w-6xl scroll-mt-20 px-6 py-20">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Operate free. Scale with PRO.</h2>
+      <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-400">
+        Monitoring and signing are free, permanently. PRO adds the hosted intelligence that a large
+        fleet makes worthwhile.
+      </p>
+    </div>
+    <p
+      class="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
+      data-notice="mock-pricing"
+    >
+      Mock pricing — not final
+    </p>
+  </div>
+
+  <div class="mt-10 grid gap-5 lg:grid-cols-2">
+    {
+      tiers.map((tier) => (
+        <article
+          class:list={[
+            'flex flex-col rounded-xl border p-6',
+            tier.highlighted
+              ? 'border-indigo-500/40 bg-indigo-950/20 ring-1 ring-indigo-500/20'
+              : 'border-slate-800 bg-slate-900/40',
+          ]}
+          data-tier={tier.id}
+        >
+          <div class="flex items-baseline justify-between">
+            <h3 class="text-lg font-semibold text-slate-100">{tier.name}</h3>
+            <p class="font-mono text-sm text-slate-300">{tier.price}</p>
+          </div>
+          <p class="mt-1 text-[11px] tracking-wide text-amber-400/80 uppercase">{tier.note}</p>
+
+          <ul class="mt-6 flex-1 space-y-3" role="list">
+            {tier.features.map((feature) => (
+              <li class="flex gap-3 text-sm text-slate-400">
+                <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-indigo-400" aria-hidden="true"></span>
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div class="mt-6">
+            <span
+              aria-disabled="true"
+              title="Not available yet"
+              class="inline-flex w-full cursor-not-allowed items-center justify-center rounded-md border border-slate-800 bg-slate-950/60 px-4 py-2.5 text-sm font-semibold text-slate-500"
+            >
+              {tier.cta}
+              <span class="sr-only"> — coming soon</span>
+            </span>
+          </div>
+        </article>
+      ))
+    }
+  </div>
+
+  <p class="mt-6 text-xs leading-relaxed text-slate-500">
+    Keys, collateral and signing stay on your machine in every tier. A lapsed subscription must
+    never lock you out of your own node.
+  </p>
+</section>

@@ -3,20 +3,28 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
-import Features from '../components/Features.astro';
+import Pillars from '../components/Pillars.astro';
 import Downloads from '../components/Downloads.astro';
+import Features from '../components/Features.astro';
+import Calculator from '../components/Calculator.astro';
+import Pricing from '../components/Pricing.astro';
+import Roadmap from '../components/Roadmap.astro';
 import Footer from '../components/Footer.astro';
 ---
 
 <Layout
-  title="Evo Titan"
-  description="Evo Titan — desktop, mobile and web. Download the native application or connect via the web app."
+  title="Evo Titan — masternode & evonode operations"
+  description="Evo Titan is the desktop command centre for Dash masternode and evonode operators: shared ownership coordination, fleet management, and reward tracking."
 >
   <Header />
   <main class="flex-1">
     <Hero />
-    <Downloads />
+    <Pillars />
     <Features />
+    <Calculator />
+    <Pricing />
+    <Downloads />
+    <Roadmap />
   </main>
   <Footer />
 </Layout>

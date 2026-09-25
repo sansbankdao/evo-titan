@@ -1,0 +1,229 @@
+---
+// packages/web/src/components/Calculator.astro — Evo Titan
+//
+// A USER-DRIVEN projection. Every number comes from what the operator types;
+// nothing here is a predicted return or a claim by Evo Titan. The defaults are
+// placeholders (see MOCK markers in src/config/site.ts).
+import { calculator, protocol } from '../config/site';
+
+const { defaults } = calculator;
+---
+
+<section id="growth" class="border-y border-slate-800/60 bg-slate-900/20">
+  <div class="mx-auto w-full max-w-6xl scroll-mt-20 px-6 py-20">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          Plot your own growth
+        </h2>
+        <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-400">
+          Enter your own assumptions. The chart is arithmetic on your inputs — not a forecast, and
+          not advice.
+        </p>
+      </div>
+      <p
+        class="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
+        data-notice="illustrative"
+      >
+        Illustrative only — your inputs
+      </p>
+    </div>
+
+    <div class="mt-10 grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+      <!-- Inputs -->
+      <form class="space-y-5 rounded-xl border border-slate-800 bg-slate-950/40 p-5" data-calc-form>
+        <fieldset class="space-y-5">
+          <legend class="sr-only">Projection inputs</legend>
+
+          <div>
+            <label for="calc-nodes" class="flex items-baseline justify-between text-sm font-medium text-slate-300">
+              <span>Nodes</span>
+              <output for="calc-nodes" id="calc-nodes-out" class="font-mono text-xs text-indigo-300"
+                >{defaults.nodes}</output
+              >
+            </label>
+            <input
+              id="calc-nodes"
+              name="nodes"
+              type="range"
+              min="1"
+              max="50"
+              step="1"
+              value={defaults.nodes}
+              class="mt-3 w-full accent-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label for="calc-share" class="flex items-baseline justify-between text-sm font-medium text-slate-300">
+              <span>Your share of each node</span>
+              <output for="calc-share" id="calc-share-out" class="font-mono text-xs text-indigo-300"
+                >{defaults.sharePercent}%</output
+              >
+            </label>
+            <input
+              id="calc-share"
+              name="share"
+              type="range"
+              min="10"
+              max="100"
+              step="1"
+              value={defaults.sharePercent}
+              class="mt-3 w-full accent-indigo-500"
+            />
+            <p class="mt-2 text-xs text-slate-500">
+              Below 100%? Then this is a shared masternode — Dash Core v24 allows
+              {' '}{protocol.minShares}–{protocol.maxShares} co-owners.
+            </p>
+          </div>
+
+          <div>
+            <label for="calc-reward" class="flex items-baseline justify-between text-sm font-medium text-slate-300">
+              <span>Reward per node / month</span>
+              <output for="calc-reward" id="calc-reward-out" class="font-mono text-xs text-indigo-300"
+                >{defaults.dashPerNodeMonth} DASH</output
+              >
+            </label>
+            <input
+              id="calc-reward"
+              name="reward"
+              type="range"
+              min="0.1"
+              max="20"
+              step="0.1"
+              value={defaults.dashPerNodeMonth}
+              class="mt-3 w-full accent-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label for="calc-price" class="text-sm font-medium text-slate-300" for="calc-price">
+              DASH price (optional, for USD)
+            </label>
+            <input
+              id="calc-price"
+              name="price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={defaults.dashPrice}
+              placeholder="0"
+              class="mt-3 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-200 placeholder:text-slate-600 focus-visible:border-indigo-500 focus-visible:outline-none"
+            />
+            <p class="mt-2 text-xs text-slate-500">Left at 0, the chart stays in DASH.</p>
+          </div>
+        </fieldset>
+      </form>
+
+      <!-- Chart -->
+      <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
+        <div class="flex items-baseline justify-between">
+          <p class="text-[11px] tracking-wide text-slate-500 uppercase">Cumulative rewards — 24 months</p>
+          <p class="font-mono text-xs text-slate-400">
+            <span data-calc-total class="text-indigo-300">0</span>
+            <span data-calc-unit class="text-slate-600">DASH</span>
+          </p>
+        </div>
+
+        <svg
+          viewBox="0 0 480 200"
+          preserveAspectRatio="none"
+          class="mt-4 h-52 w-full"
+          role="img"
+          aria-labelledby="calc-chart-title"
+        >
+          <title id="calc-chart-title">Cumulative rewards over 24 months, based on your inputs</title>
+          <!-- Grid -->
+          <g stroke="rgba(148,163,184,0.14)" stroke-width="1" vector-effect="non-scaling-stroke">
+            <line x1="0" y1="0" x2="480" y2="0"></line>
+            <line x1="0" y1="50" x2="480" y2="50"></line>
+            <line x1="0" y1="100" x2="480" y2="100"></line>
+            <line x1="0" y1="150" x2="480" y2="150"></line>
+            <line x1="0" y1="200" x2="480" y2="200"></line>
+          </g>
+          <path data-calc-area fill="rgba(99,102,241,0.14)" d=""></path>
+          <path
+            data-calc-line
+            fill="none"
+            stroke="rgb(129,140,248)"
+            stroke-width="2"
+            vector-effect="non-scaling-stroke"
+            d=""></path>
+        </svg>
+
+        <div class="mt-3 flex justify-between font-mono text-[10px] text-slate-600">
+          <span>month 0</span>
+          <span>month 12</span>
+          <span>month 24</span>
+        </div>
+
+        <p class="mt-4 border-t border-slate-800/60 pt-4 text-xs leading-relaxed text-slate-500">
+          Arithmetic on your inputs only. Real payouts depend on the deterministic reward queue,
+          which is not evenly distributed across days.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Recompute on every input change. Values are illustrative and come from the
+  // form; no value is asserted by the site.
+  const MONTHS = 24;
+  const form = document.querySelector<HTMLFormElement>('[data-calc-form]');
+  const line = document.querySelector<SVGPathElement>('[data-calc-line]');
+  const area = document.querySelector<SVGPathElement>('[data-calc-area]');
+  const totalEl = document.querySelector<HTMLElement>('[data-calc-total]');
+  const unitEl = document.querySelector<HTMLElement>('[data-calc-unit]');
+
+  const outNodes = document.querySelector<HTMLOutputElement>('#calc-nodes-out');
+  const outShare = document.querySelector<HTMLOutputElement>('#calc-share-out');
+  const outReward = document.querySelector<HTMLOutputElement>('#calc-reward-out');
+
+  if (form && line && area && totalEl && unitEl) {
+    const nodes = form.elements.namedItem('nodes') as HTMLInputElement;
+    const share = form.elements.namedItem('share') as HTMLInputElement;
+    const reward = form.elements.namedItem('reward') as HTMLInputElement;
+    const price = form.elements.namedItem('price') as HTMLInputElement;
+
+    const W = 480;
+    const H = 200;
+    const PAD = 8;
+
+    const render = () => {
+      const n = Number(nodes.value);
+      const pct = Number(share.value) / 100;
+      const perMonth = Number(reward.value);
+      const px = Number(price.value);
+
+      if (outNodes) outNodes.textContent = String(n);
+      if (outShare) outShare.textContent = `${share.value}%`;
+      if (outReward) outReward.textContent = `${reward.value} DASH`;
+
+      // Monthly accretion for the operator's own portion of each node.
+      const monthly = n * pct * perMonth;
+      const points: number[] = [];
+      for (let m = 0; m <= MONTHS; m += 1) points.push(monthly * m);
+
+      const max = points[points.length - 1] || 1;
+      const x = (i: number) => (i / MONTHS) * W;
+      const y = (v: number) => H - PAD - (v / max) * (H - PAD * 2);
+
+      let d = '';
+      points.forEach((v, i) => {
+        d += `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(2)} ${y(v).toFixed(2)} `;
+      });
+      line.setAttribute('d', d.trim());
+      area.setAttribute('d', `${d}L ${W} ${H} L 0 ${H} Z`.trim());
+
+      const inDollars = px > 0;
+      totalEl.textContent = inDollars
+        ? `$${(max * px).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+        : max.toLocaleString(undefined, { maximumFractionDigits: 1 });
+      unitEl.textContent = inDollars ? 'USD' : 'DASH';
+    };
+
+    form.addEventListener('input', render);
+    render();
+  }
+</script>
