@@ -1,0 +1,65 @@
+---
+// packages/web/src/components/Journey.astro — Evo Titan
+//
+// The operator's path, ending at a first Evo node. Stage requirements are
+// sourced Dash Core v24 consensus; the stage LABELS are Evo Titan's own
+// positioning language and are marked as such in the config.
+import { journey, protocol } from '../config/site';
+---
+
+<section id="path" class="border-y border-slate-800/60 bg-slate-950/40">
+  <div class="mx-auto w-full max-w-6xl scroll-mt-20 px-6 py-20">
+    <h2 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">{journey.title}</h2>
+    <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-400">
+      Start with a fraction of a masternode. Finish running an evonode of your own — then as many
+      as you need.
+    </p>
+
+    <ol class="mt-12 grid gap-px overflow-hidden rounded-xl border border-slate-800 bg-slate-800 lg:grid-cols-5" role="list">
+      {
+        journey.stages.map((stage, index) => {
+          const isLast = index === journey.stages.length - 1;
+          const isEvo = stage.id === 'evonode';
+          return (
+            <li
+              class:list={[
+                'relative flex flex-col p-5',
+                isEvo ? 'bg-indigo-950/30' : 'bg-slate-950',
+              ]}
+              data-stage={stage.id}
+              data-evo={isEvo ? 'true' : undefined}
+            >
+              <div class="flex items-baseline justify-between gap-2">
+                <span class:list={['font-mono text-xs', isEvo ? 'text-indigo-400' : 'text-slate-600']}>
+                  {stage.step}
+                </span>
+                {isLast && (
+                  <span class="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                    Enterprise
+                  </span>
+                )}
+              </div>
+
+              <h3 class:list={['mt-4 text-sm font-semibold', isEvo ? 'text-indigo-200' : 'text-slate-100']}>
+                {stage.label}
+              </h3>
+
+              <p class:list={['mt-1 font-mono text-xs', isEvo ? 'text-indigo-400/90' : 'text-slate-500']}>
+                {stage.amount}
+              </p>
+
+              <p class="mt-3 text-xs leading-relaxed text-slate-400">{stage.body}</p>
+            </li>
+          );
+        })
+      }
+    </ol>
+
+    <p class="mt-6 text-xs leading-relaxed text-slate-500">
+      {journey.note} Masternode collateral is {protocol.regularCollateral.toLocaleString()} DASH and
+      an evonode is {protocol.evoCollateral.toLocaleString()} DASH. A shared masternode is limited to
+      {' '}{protocol.minShares}–{protocol.maxShares} co-owners with no share below
+      {' '}{protocol.minShareAmount} DASH, and shared collateral cannot register an evonode.
+    </p>
+  </div>
+</section>

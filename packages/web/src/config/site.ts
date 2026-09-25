@@ -46,6 +46,59 @@ export const protocol = {
 };
 
 // ---------------------------------------------------------------------------
+// The operator's path
+// ---------------------------------------------------------------------------
+
+/**
+ * Evo Titan's own positioning language, NOT a Dash protocol term. "Cluster"
+ * appears nowhere in Dash Core v24.0.0-rc.1: a tree-wide grep returns only
+ * unrelated fuzz-test fixtures under src/immer. Where we say "cluster" we mean
+ * many evonodes in one enterprise setup — our word for it, not the protocol's.
+ * The stage REQUIREMENTS are consensus and sourced; the labels are ours.
+ */
+export const journey = {
+  title: 'Your first Evo node',
+  note: 'Stage requirements are Dash Core v24 consensus. The naming is ours.',
+  stages: [
+    {
+      id: 'share',
+      step: '01',
+      label: 'Take a share',
+      amount: `from ${protocol.minShareAmount} DASH`,
+      body: 'Buy into a shared masternode without raising the full collateral. Dash Core v24 allows 2–8 co-owners to pool exactly 1,000 DASH.',
+    },
+    {
+      id: 'whole',
+      step: '02',
+      label: 'Own a whole masternode',
+      amount: `${protocol.regularCollateral.toLocaleString()} DASH`,
+      body: 'Once you hold the full regular collateral, register a node in your own name. Rewards stop being split.',
+    },
+    {
+      id: 'many',
+      step: '03',
+      label: 'Run many',
+      amount: 'n × 1,000 DASH',
+      body: 'Add nodes to the same console. One identity, one workflow, however large the fleet gets.',
+    },
+    {
+      id: 'evonode',
+      step: '04',
+      label: 'Your first Evo node',
+      amount: `${protocol.evoCollateral.toLocaleString()} DASH`,
+      body: 'Step up to an evonode, which carries four times the voting weight of a regular masternode. It is registered whole, by one owner — shared collateral cannot be used for an evonode.',
+    },
+    {
+      id: 'cluster',
+      step: '05',
+      label: 'Then a cluster',
+      amount: 'n × 4,000 DASH',
+      body: 'Run many evonodes as one enterprise setup: a cluster of high-weight nodes under a single console.',
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
 // The four pillars
 // ---------------------------------------------------------------------------
 
@@ -72,8 +125,8 @@ export const pillars = [
   {
     id: 'usdc',
     label: 'Dash USDC',
-    title: 'Manage your shielded dollar position',
-    body: 'Track a USDC-backed stablecoin position alongside your node collateral, in the same portfolio view as your masternode rewards.',
+    title: 'Ready before it ships',
+    body: 'A USDC-backed stablecoin for Dash is announced for the coming months and is not live yet. Evo Titan is being built to support it from the day it lands, so your dollar position sits beside your node collateral in one portfolio view.',
   },
 ];
 
@@ -136,21 +189,63 @@ export const steps = [
 ];
 
 // ---------------------------------------------------------------------------
-// MOCK pricing — invented, and deliberately does NOT gate key access
+// Pricing
 // ---------------------------------------------------------------------------
 
 /**
- * MOCK tiers. The agreed direction: PRO sells AI assistance, automation and
- * reporting, and is gated by the API. PRO must never gate access to a user's
- * own keys or their ability to sign — a lapsed subscription cannot be allowed
- * to lock someone out of their collateral.
+ * Titan PRO pricing is DECIDED (not mock): $5.00/month, 30% off when paid in
+ * Dash USDC. The discounted figure is DERIVED, never hardcoded, so the two can
+ * not drift apart.
+ *
+ * The Dash USDC discount is not yet chargeable: Dash USDC does not exist. It is
+ * announced for the coming months. See `paymentProvider` for the state of
+ * crypto checkout.
+ *
+ * Standing constraint, not a mock: no tier gates access to a user's own keys or
+ * their ability to sign. A lapsed subscription must never lock an operator out
+ * of their own collateral.
+ */
+const PRO_PRICE_MONTHLY = 5;
+const USDC_DISCOUNT = 0.3;
+
+/** Prices are formatted to 2 decimals so "$3.50" never renders as "$3.5". */
+const money = (n: number): string => `$${n.toFixed(2)}`;
+
+export const pricing = {
+  currency: 'USD',
+  monthly: PRO_PRICE_MONTHLY,
+  monthlyLabel: money(PRO_PRICE_MONTHLY),
+  usdcDiscountPercent: USDC_DISCOUNT * 100,
+  monthlyWithUsdc: Number((PRO_PRICE_MONTHLY * (1 - USDC_DISCOUNT)).toFixed(2)),
+  monthlyWithUsdcLabel: money(PRO_PRICE_MONTHLY * (1 - USDC_DISCOUNT)),
+  savingPerMonth: Number((PRO_PRICE_MONTHLY * USDC_DISCOUNT).toFixed(2)),
+  savingPerMonthLabel: money(PRO_PRICE_MONTHLY * USDC_DISCOUNT),
+};
+
+/**
+ * Payment provider research. NOWPayments advertises 300+ currencies; its public
+ * `/v1/currencies` endpoint (fetched, no key required) returns 203 and DOES
+ * include `dash` and `usdc` (plus usdcbase, usdcarb, usdcmatic, usdcsol and
+ * others). It does NOT include a USDC token on the Dash chain, because Dash USDC
+ * does not exist yet. No integration has been implemented.
+ */
+export const paymentProvider = {
+  candidate: 'NOWPayments',
+  dashSupported: true,
+  usdcSupported: true,
+  usdcOnDashChain: false,
+  integrated: false,
+};
+
+/**
+ * MOCK feature list for the tiers. Pricing is real; the feature wording is not.
  */
 export const tiers = [
   {
     id: 'free',
     name: 'Operator',
     price: 'Free',
-    note: 'MOCK PRICING',
+    note: 'Free forever',
     features: [
       'Unlimited local nodes',
       'Shared masternode coordination',
@@ -163,8 +258,15 @@ export const tiers = [
   {
     id: 'pro',
     name: 'Titan PRO',
-    price: '$—/mo',
-    note: 'MOCK PRICING — price undecided',
+    price: `${pricing.monthlyLabel}/mo`,
+    note: 'Billed monthly',
+    /** Rendered as a badge beside the price. Dash USDC is not live yet. */
+    discount: {
+      percent: pricing.usdcDiscountPercent,
+      price: `${pricing.monthlyWithUsdcLabel}/mo`,
+      label: `Pay with Dash USDC and save ${pricing.usdcDiscountPercent}%`,
+      pending: true,
+    },
     features: [
       'AI assistant for automation and reporting',
       'Hosted API: remote metrics, remote alerts',
@@ -204,5 +306,9 @@ export const calculator = {
 export const roadmap = [
   { when: 'Now', what: 'Desktop client, shared-ownership coordination', state: 'planned' },
   { when: 'Next', what: 'Titan PRO: AI assistance and hosted API', state: 'planned' },
-  { when: 'Later', what: 'Dash Intents companion, Dash USDC view', state: 'planned' },
+  {
+    when: 'Watch',
+    what: 'Dash USDC support, tracked from Testnet onward',
+    state: 'watching',
+  },
 ];
