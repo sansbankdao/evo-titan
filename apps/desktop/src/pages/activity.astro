@@ -30,15 +30,15 @@ const tones = {
             />
             <div class="min-w-0 flex-1">
               <p class="text-sm text-slate-300">{entry.text}</p>
-              <p class="selectable mt-0.5 font-mono text-[10px] text-slate-600">{entry.when}</p>
+              <p class="selectable mt-0.5 font-mono text-xs text-slate-600">{entry.when}</p>
             </div>
-            <span class="mt-0.5 shrink-0 text-[10px] text-slate-600">{tones[entry.tone].label}</span>
+            <span class="mt-0.5 shrink-0 text-xs text-slate-600">{tones[entry.tone].label}</span>
           </li>
         ))
       }
     </ol>
 
-    <p class="mt-6 text-[11px] leading-relaxed text-slate-600">
+    <p class="mt-6 text-xs leading-relaxed text-slate-600">
       MOCK DATA. This log is fabricated and is not read from a node.
     </p>
   </div>

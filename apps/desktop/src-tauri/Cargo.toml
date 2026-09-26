@@ -1,6 +1,6 @@
 [package]
 name = "evo-titan"
-version = "26.9.25"
+version = "26.9.26"
 description = "Evo Titan desktop application"
 authors = ["Sansbank contributors <hello@sansbank.org>"]
 license = ""

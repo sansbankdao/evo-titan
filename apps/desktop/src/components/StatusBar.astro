@@ -9,11 +9,11 @@ import { summary } from '../lib/mock';
 // Kept in step with tauri.conf.json by hand: the webview cannot read the
 // bundle version, and importing package.json into the client bundle would ship
 // the whole manifest. If the version moves, move it here too.
-const appVersion = '26.9.25';
+const appVersion = '26.9.26';
 ---
 
 <footer
-  class="flex shrink-0 items-center justify-between gap-4 border-t border-titan-800 bg-titan-900 px-4 py-1.5 text-[11px] text-slate-500"
+  class="flex shrink-0 items-center justify-between gap-4 border-t border-titan-800 bg-titan-900 px-4 py-1.5 text-xs text-slate-500"
   data-notice="status-bar"
 >
   <div class="flex items-center gap-4">

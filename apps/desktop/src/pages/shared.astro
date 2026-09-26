@@ -60,11 +60,11 @@ const splits = shared.map((node) => {
               <div>
                 <div class="flex items-center gap-2">
                   <h2 class="text-sm font-semibold text-slate-100">{node.alias}</h2>
-                  <span class="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
+                  <span class="rounded border border-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
                     {node.shares.length} owners
                   </span>
                 </div>
-                <p class="selectable mt-0.5 font-mono text-[10px] text-slate-600" title={node.proTxHash}>
+                <p class="selectable mt-0.5 font-mono text-xs text-slate-600" title={node.proTxHash}>
                   {short(node.proTxHash)}
                 </p>
               </div>
@@ -98,13 +98,13 @@ const splits = shared.map((node) => {
                 >
                   <span class="w-28 shrink-0 truncate font-medium text-slate-200">{part.owner}</span>
                   <span class="font-mono text-slate-300">{part.amount.toLocaleString()} DASH</span>
-                  <span class="font-mono text-[10px] text-slate-600">{part.pct.toFixed(1)}%</span>
-                  <span class="selectable font-mono text-[10px] text-slate-600" title={part.keyId}>
+                  <span class="font-mono text-xs text-slate-600">{part.pct.toFixed(1)}%</span>
+                  <span class="selectable font-mono text-xs text-slate-600" title={part.keyId}>
                     {part.keyId}
                   </span>
                   <span
                     class:list={[
-                      'ml-auto inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                      'ml-auto inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium',
                       part.signed
                         ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
                         : 'border-amber-500/25 bg-amber-500/10 text-amber-300',
@@ -117,7 +117,7 @@ const splits = shared.map((node) => {
               ))}
             </ul>
 
-            <div class="border-t border-titan-800 bg-titan-950/60 px-4 py-2 text-[10px] text-slate-600">
+            <div class="border-t border-titan-800 bg-titan-950/60 px-4 py-2 text-xs text-slate-600">
               Shares must total exactly {(node.collateralAmount).toLocaleString()} DASH. Shared
               collateral cannot register an Evo node.
             </div>
@@ -126,7 +126,7 @@ const splits = shared.map((node) => {
       }
     </div>
 
-    <p class="mt-6 text-[11px] leading-relaxed text-slate-600">
+    <p class="mt-6 text-xs leading-relaxed text-slate-600">
       MOCK DATA. The share rules above are Dash Core v24 consensus and sourced; the owners,
       amounts and keys are invented.
     </p>

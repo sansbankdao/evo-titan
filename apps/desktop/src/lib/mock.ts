@@ -28,6 +28,98 @@ export const protocol = {
   minShareAmount: 100,
 } as const;
 
+/**
+ * The reward model. DERIVED from Dash Core v24.0.0-rc.1 consensus — not read
+ * from a node, because there is no node connected (see `rpc.ts`, which throws).
+ *
+ * The arithmetic, with every input cited:
+ *
+ *   block time       150s        src/chainparams.cpp:200
+ *   blocks/year      210240      src/chainparams.cpp:162 (nSubsidyHalvingInterval)
+ *   subsidy base     5 DASH      src/validation.cpp (nSubsidyBase, V20+)
+ *   treasury         20%         src/validation.cpp (nSuperblockPart = nSubsidy/5)
+ *   interval decline 1/14        src/validation.cpp (nSubsidy -= nSubsidy/14)
+ *   MN share         75%         src/masternode/payments.cpp:101 (blockValue * 3/4)
+ *   Platform cut     37.5%       src/masternode/payments.cpp:53 (reward * 375/1000)
+ *
+ *   subsidy after decline        4.642857
+ *   less treasury (20%)          0.928571
+ *   block value                  3.714286
+ *   MN gross (75%)               2.785714
+ *   less Platform (37.5%)        1.044643
+ *   MN net                       1.741071 DASH/block
+ *   x 210240                     366,043 DASH/year to ALL masternodes
+ *
+ * APY = 366,043 / (registered nodes) / collateral. The node count is the one
+ * live input we cannot read, so it is a labelled assumption below.
+ *
+ * This pot shrinks ~7.1% every 210,240 blocks. Do not present it as a yield.
+ */
+export const yieldModel = {
+  blockSeconds: 150,
+  blocksPerYear: 210240,
+  masternodeRewardNet: 1.741071,
+  platformCut: 1.044643,
+  masternodeRewardGross: 2.785714,
+  blockValue: 3.714286,
+  /** Derived: masternodeRewardNet * blocksPerYear. To ALL nodes, not one. */
+  annualMasternodePot: 366043,
+  /**
+   * MOCK assumption. `nodes` is live network state we cannot read without a
+   * node, and it is the ONLY unsourced input in the model.
+   */
+  assumedNodes: 4000,
+} as const;
+
+/**
+ * Fees. `custodialPercent` is the product price the operator set for the
+ * custodial service (we hold the keys). `sharedPoolBand` is a RECOMMENDATION
+ * for the self-custodial shared pool, where we coordinate but hold nothing.
+ *
+ * In-protocol the fee is CProRegTx.nOperatorReward, in basis points, applied at
+ * src/masternode/payments.cpp:167 BEFORE the share split at :175 — so it comes
+ * off the whole node, not off each depositor's slice.
+ */
+export const fees = {
+  custodialPercent: 30,
+  sharedPoolBand: { lowPercent: 10, highPercent: 20, recommendedPercent: 15 },
+} as const;
+
+/** Derived reward figures for one node, at `yieldModel.assumedNodes`. */
+export const nodeEarnings = {
+  grossPerYear: yieldModel.annualMasternodePot / yieldModel.assumedNodes,
+  get netPerYear(): number {
+    return this.grossPerYear * (1 - fees.custodialPercent / 100);
+  },
+  get grossApy(): number {
+    return (this.grossPerYear / protocol.regularCollateral) * 100;
+  },
+  get netApy(): number {
+    return (this.netPerYear / protocol.regularCollateral) * 100;
+  },
+} as const;
+
+/**
+ * A worked share: 125 DASH of a 1,000 DASH node, i.e. 12.5%. Dash Core splits
+ * by collateral (SplitAmountByShares), so the share earns 12.5% of the node
+ * reward; the custodial fee then comes off the top.
+ */
+export const shareEarnings = (() => {
+  const deposit = 125;
+  const fraction = deposit / protocol.regularCollateral;
+  const gross = nodeEarnings.grossPerYear * fraction;
+  const fee = (gross * fees.custodialPercent) / 100;
+  return {
+    deposit,
+    fraction,
+    grossPerYear: gross,
+    feePerYear: fee,
+    netPerYear: gross - fee,
+    grossApy: (gross / deposit) * 100,
+    netApy: ((gross - fee) / deposit) * 100,
+  };
+})();
+
 /** MOCK. Node type as it will be reported by the node. */
 export type NodeKind = 'regular' | 'evonode';
 
@@ -547,6 +639,18 @@ export const poolProgress = ((): {
 /** MOCK. Format a DASH amount consistently. */
 export const dash = (n: number): string =>
   `${n.toLocaleString(undefined, { maximumFractionDigits: 8 })} DASH`;
+
+/**
+ * Format a DASH amount for an earnings figure.
+ *
+ * `dash()` allows 8 decimals (correct for a coin amount that must round-trip),
+ * but an earnings projection rendered as `8.00719063 DASH` reads as false
+ * precision: the model's own inputs are rounded to 6 decimals and the node
+ * count is an assumption. Four decimals is the most this arithmetic can
+ * honestly support.
+ */
+export const dash4 = (n: number): string =>
+  `${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} DASH`;
 
 /** MOCK. Truncate a hex string the way a block explorer would. */
 export const short = (hex: string, head = 8, tail = 6): string =>

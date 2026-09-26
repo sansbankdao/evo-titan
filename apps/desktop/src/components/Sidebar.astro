@@ -58,7 +58,7 @@ const custodialItem = { id: 'custodial', label: 'Custodial pool', href: '/custod
             <span>{item.label}</span>
             {item.id === 'fleet' && needsAttention > 0 && (
               <span
-                class="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
+                class="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-xs font-semibold text-amber-300"
                 title={`${needsAttention} node(s) need attention`}
               >
                 {needsAttention}
@@ -84,7 +84,7 @@ const custodialItem = { id: 'custodial', label: 'Custodial pool', href: '/custod
     >
       <span>{custodialItem.label}</span>
       {custodialItem.planned && (
-        <span class="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-300">
+        <span class="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-xs font-medium text-amber-300">
           Planned
         </span>
       )}
@@ -116,9 +116,9 @@ const custodialItem = { id: 'custodial', label: 'Custodial pool', href: '/custod
 
   <div class="border-t border-titan-800 p-3">
     <div class="rounded-md bg-titan-950/60 px-3 py-2.5">
-      <p class="text-[10px] tracking-wide text-slate-500 uppercase">Plan</p>
+      <p class="text-xs tracking-wide text-slate-500 uppercase">Plan</p>
       <p class="mt-0.5 text-sm font-medium text-slate-300">Operator</p>
-      <p class="mt-1 text-[10px] text-slate-600">Free forever</p>
+      <p class="mt-1 text-xs text-slate-600">Free forever</p>
     </div>
   </div>
 </aside>

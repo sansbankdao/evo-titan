@@ -10,7 +10,7 @@ import { roadmap } from '../config/site';
     <div class="flex flex-wrap items-center gap-3">
       <h2 class="text-lg font-semibold text-white">Roadmap</h2>
       <span
-        class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-300"
+        class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-300"
         >Mock — not scheduled</span
       >
     </div>
@@ -19,7 +19,7 @@ import { roadmap } from '../config/site';
       {
         roadmap.map((item) => (
           <li class="rounded-lg border border-slate-800 bg-slate-900/30 p-5">
-            <p class="font-mono text-[11px] tracking-wide text-indigo-400 uppercase">{item.when}</p>
+            <p class="font-mono text-xs tracking-wide text-indigo-400 uppercase">{item.when}</p>
             <p class="mt-2 text-sm text-slate-300">{item.what}</p>
           </li>
         ))

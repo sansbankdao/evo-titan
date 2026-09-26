@@ -33,7 +33,16 @@
 //   - shared collateral is Regular-node ONLY (providertx.cpp:280 rejects an
 //     Evo node with `bad-protx-shares-evo`)
 import Layout from '../layouts/Layout.astro';
-import { custodialPool, poolProgress, protocol, dash } from '../lib/mock';
+import {
+  custodialPool,
+  poolProgress,
+  protocol,
+  dash,
+  yieldModel,
+  shareEarnings,
+  fees,
+  dash4,
+} from '../lib/mock';
 
 // Depositor rows, augmented with their share of the pool for the split bar.
 // Computed from the amounts rather than hardcoded, so an uneven deposit is
@@ -69,7 +78,7 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
     >
       <div class="flex items-start gap-3">
         <span
-          class="mt-0.5 shrink-0 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-300 uppercase"
+          class="mt-0.5 shrink-0 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold tracking-wide text-amber-300 uppercase"
         >
           Planned
         </span>
@@ -94,7 +103,7 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
         <div class="flex items-center gap-2">
           <h1 class="text-xl font-semibold tracking-tight text-white">{custodialPool.name}</h1>
           <span
-            class="rounded border border-titan-500/30 bg-titan-500/10 px-1.5 py-0.5 text-[10px] font-medium text-titan-300"
+            class="rounded border border-titan-500/30 bg-titan-500/10 px-1.5 py-0.5 text-xs font-medium text-titan-300"
             data-rank="0"
           >
             Rank 0 · Custodial
@@ -147,17 +156,17 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
 
       <div class="mt-3 grid gap-3 sm:grid-cols-3">
         <div>
-          <p class="text-[11px] tracking-wide text-slate-500 uppercase">Remaining</p>
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Remaining</p>
           <p class="mt-1 font-mono text-sm text-slate-200">{dash(poolProgress.remaining)}</p>
         </div>
         <div>
-          <p class="text-[11px] tracking-wide text-slate-500 uppercase">Depositors</p>
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Depositors</p>
           <p class="mt-1 font-mono text-sm text-slate-200">
             {rows.length} / {poolProgress.maxDepositors}
           </p>
         </div>
         <div>
-          <p class="text-[11px] tracking-wide text-slate-500 uppercase">To complete</p>
+          <p class="text-xs tracking-wide text-slate-500 uppercase">To complete</p>
           <p class="mt-1 font-mono text-sm text-slate-200">
             {poolProgress.ticketsRemaining} × {poolProgress.ticketSize.toLocaleString()} DASH
           </p>
@@ -169,7 +178,7 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
         the numbers, not a protocol rule, and the caption says so — otherwise
         a reader would reasonably assume 125 is mandated, which it is not.
       -->
-      <p class="mt-3 border-t border-titan-800 pt-3 text-[11px] leading-relaxed text-slate-500">
+      <p class="mt-3 border-t border-titan-800 pt-3 text-xs leading-relaxed text-slate-500">
         {poolProgress.ticketSize.toLocaleString()} DASH × {poolProgress.maxDepositors} depositors =
         {' '}{poolProgress.target.toLocaleString()} DASH, the collateral for one Regular masternode. The
         {poolProgress.maxDepositors}-share ceiling is consensus (Dash Core v24). We form the
@@ -181,6 +190,64 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
       </p>
     </section>
 
+    <!--
+      Projected earnings for a custodial depositor.
+
+      These figures are NOT invented: they are arithmetic on Dash Core v24
+      consensus rules, cited in `mock.ts -> yieldModel`. The one unsourced input
+      is the registered-node count, shown as an assumption. The 30% fee is our
+      price, applied to the gross reward. Nothing here is a promise, and the
+      layer is not open.
+    -->
+    <section
+      class="mt-4 rounded-lg border border-titan-500/25 bg-titan-500/5 p-4"
+      data-section="projection"
+      data-assumed-nodes={String(yieldModel.assumedNodes)}
+    >
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-200">Projected earnings</h2>
+        <span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+          Model · {yieldModel.assumedNodes.toLocaleString()} nodes assumed · {fees.custodialPercent}% fee
+        </span>
+      </div>
+      <p class="mt-1 text-xs leading-relaxed text-slate-500">
+        We take {fees.custodialPercent}% of the gross masternode reward. The reward is split by
+        collateral (SplitAmountByShares), so a {shareEarnings.deposit} DASH deposit earns
+        {' '}{shareEarnings.fraction * 100}% of one node's reward before our fee.
+      </p>
+
+      <div class="mt-3 grid gap-3 sm:grid-cols-3">
+        <div data-proj="gross">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Gross on {shareEarnings.deposit} DASH</p>
+          <p class="mt-1 font-mono text-lg text-slate-100">
+            {dash4(shareEarnings.grossPerYear)}<span class="text-xs text-slate-500"> /yr</span>
+          </p>
+          <p class="text-xs text-slate-500">{shareEarnings.grossApy.toFixed(2)}% on {shareEarnings.deposit} DASH</p>
+        </div>
+        <div data-proj="fee">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Less {fees.custodialPercent}% fee</p>
+          <p class="mt-1 font-mono text-lg text-rose-300">
+            −{dash4(shareEarnings.feePerYear)}<span class="text-xs text-slate-500"> /yr</span>
+          </p>
+          <p class="text-xs text-slate-500">To us, for running the node</p>
+        </div>
+        <div data-proj="net">
+          <p class="text-xs tracking-wide text-titan-300 uppercase">You keep</p>
+          <p class="mt-1 font-mono text-lg text-white">
+            {dash4(shareEarnings.netPerYear)}<span class="text-xs text-slate-500"> /yr</span>
+          </p>
+          <p class="text-xs text-slate-500">{shareEarnings.netApy.toFixed(2)}% on {shareEarnings.deposit} DASH</p>
+        </div>
+      </div>
+
+      <p class="mt-3 border-t border-titan-800/60 pt-2 text-xs leading-relaxed text-slate-500">
+        Derived from the per-block reward of {yieldModel.masternodeRewardNet.toFixed(6)} DASH (net of the
+        {' '}{yieldModel.platformCut.toFixed(6)} DASH Platform cut) across {yieldModel.blocksPerYear.toLocaleString()}
+        blocks a year. The node count is an assumption, the pot shrinks ~7.1% every 210,240 blocks, and this is
+        not an offer — the layer is not open.
+      </p>
+    </section>
+
     <div class="mt-4 grid gap-4 lg:grid-cols-5">
       <!-- Depositors -->
       <section
@@ -189,7 +256,7 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
       >
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-sm font-semibold text-slate-200">Depositors</h2>
-          <span class="text-[11px] text-slate-500">MOCK</span>
+          <span class="text-xs text-slate-500">MOCK</span>
         </div>
 
         <ul class="mt-3 divide-y divide-titan-800" role="list">
@@ -199,18 +266,18 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
                 <span class:list={['h-2 w-2 shrink-0 rounded-full', swatches[i % swatches.length]]} aria-hidden="true" />
                 <span class="text-slate-300">{row.owner}</span>
                 {row.you && (
-                  <span class="rounded-full border border-titan-500/30 bg-titan-500/10 px-2 py-0.5 text-[10px] text-titan-300">
+                  <span class="rounded-full border border-titan-500/30 bg-titan-500/10 px-2 py-0.5 text-xs text-titan-300">
                     You
                   </span>
                 )}
                 <span class="ml-auto font-mono text-slate-400">{dash(row.amount)}</span>
-                <span class="w-20 text-right font-mono text-[10px] text-slate-600">{row.since}</span>
+                <span class="w-20 text-right font-mono text-xs text-slate-600">{row.since}</span>
               </li>
             ))
           }
         </ul>
 
-        <p class="mt-3 border-t border-titan-800 pt-3 text-[11px] text-slate-500">
+        <p class="mt-3 border-t border-titan-800 pt-3 text-xs text-slate-500">
           Every name above is invented. No deposit has been received from anyone.
         </p>
       </section>
@@ -221,7 +288,7 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
         data-section="custody"
       >
         <h2 class="text-sm font-semibold text-slate-200">What custody means here</h2>
-        <ul class="mt-3 space-y-2.5 text-[11px] leading-relaxed text-slate-400" role="list">
+        <ul class="mt-3 space-y-2.5 text-xs leading-relaxed text-slate-400" role="list">
           <li class="flex gap-2">
             <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500/60" aria-hidden="true"></span>
             <span><span class="text-slate-300">We hold the collateral.</span> You hold a claim on it, not the coins.</span>
@@ -241,18 +308,18 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
         </ul>
 
         <div class="mt-4 border-t border-titan-800 pt-3">
-          <p class="text-[11px] font-medium text-slate-400">Blocked on</p>
+          <p class="text-xs font-medium text-slate-400">Blocked on</p>
           <ul class="mt-2 space-y-1.5" role="list">
             {
               custodialPool.blockedBy.map((item) => (
-                <li class="flex gap-2 text-[11px] leading-relaxed text-slate-500">
+                <li class="flex gap-2 text-xs leading-relaxed text-slate-500">
                   <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-600" aria-hidden="true" />
                   <span>{item}</span>
                 </li>
               ))
             }
           </ul>
-          <p class="mt-2 text-[10px] text-slate-600">
+          <p class="mt-2 text-xs text-slate-600">
             Stated as conditions, not dates. No launch date has been set.
           </p>
         </div>
@@ -270,7 +337,7 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
       data-section="rank-context"
     >
       <h2 class="text-sm font-semibold text-slate-200">Where Rank 0 sits</h2>
-      <p class="mt-1 text-[11px] text-slate-500">
+      <p class="mt-1 text-xs text-slate-500">
         Rank 0 is a doorway, not a step. It is a different arrangement, not a smaller one.
       </p>
 
@@ -284,9 +351,9 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
             { rank: 'V', name: 'Evo Titan', need: 'n × 4,000 DASH', here: false },
           ].map((rung) => (
             <li class="rounded-md border border-titan-800 bg-titan-950/40 px-3 py-2">
-              <p class="font-mono text-[10px] text-titan-400">Rank {rung.rank}</p>
+              <p class="font-mono text-xs text-titan-400">Rank {rung.rank}</p>
               <p class="mt-0.5 text-xs text-slate-300">{rung.name}</p>
-              <p class="mt-0.5 text-[10px] text-slate-600">{rung.need}</p>
+              <p class="mt-0.5 text-xs text-slate-600">{rung.need}</p>
             </li>
           ))
         }
@@ -296,9 +363,9 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
         class="mt-2 rounded-md border border-dashed border-titan-700 bg-titan-950/40 px-3 py-2"
         data-rank-context="0"
       >
-        <p class="font-mono text-[10px] text-titan-400">Rank 0 · Custodial</p>
+        <p class="font-mono text-xs text-titan-400">Rank 0 · Custodial</p>
         <p class="mt-0.5 text-xs text-slate-300">We hold the collateral, you hold a claim</p>
-        <p class="mt-0.5 text-[10px] text-slate-600">A doorway, not a rung. Reaches Rank I, never Rank IV.</p>
+        <p class="mt-0.5 text-xs text-slate-600">A doorway, not a rung. Reaches Rank I, never Rank IV.</p>
       </div>
     </section>
 
@@ -318,7 +385,7 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
       >
         Join the waitlist
       </button>
-      <p class="text-[11px] text-slate-600">
+      <p class="text-xs text-slate-600">
         No form is wired, and no address is published. This waitlist is a list WE keep at our
         service level — it is not a protocol feature. A placeholder that accepted a signup would
         be worse than a disabled button, because you would believe you had joined.

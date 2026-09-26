@@ -7,7 +7,20 @@ import Layout from '../layouts/Layout.astro';
 import HealthBadge from '../components/HealthBadge.astro';
 import RewardsChart from '../components/RewardsChart.astro';
 import HealthChart from '../components/HealthChart.astro';
-import { fleet, summary, activity, dash, short, rewardsSeries, healthBreakdown } from '../lib/mock';
+import {
+  fleet,
+  summary,
+  activity,
+  dash,
+  short,
+  rewardsSeries,
+  healthBreakdown,
+  yieldModel,
+  nodeEarnings,
+  shareEarnings,
+  fees,
+  dash4,
+} from '../lib/mock';
 
 const formatDuration = (seconds: number): string => {
   if (seconds <= 0) return '—';
@@ -54,24 +67,86 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
     <!-- Summary cards -->
     <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
-        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Collateral</p>
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Collateral</p>
         <p class="mt-1.5 font-mono text-lg text-slate-100">{dash(summary.totalCollateral)}</p>
       </div>
       <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
-        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Rewards this month</p>
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Rewards this month</p>
         <p class="mt-1.5 font-mono text-lg text-slate-100">{dash(summary.rewardsThisMonth)}</p>
       </div>
       <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
-        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Rewards all-time</p>
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Rewards all-time</p>
         <p class="mt-1.5 font-mono text-lg text-slate-100">{dash(summary.rewardsAllTime)}</p>
       </div>
       <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
-        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Next payment</p>
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Next payment</p>
         <p class="mt-1.5 font-mono text-lg text-slate-100">
           {formatDuration(Math.min(...fleet.filter((n) => n.nextPaymentIn > 0).map((n) => n.nextPaymentIn)))}
         </p>
       </div>
     </div>
+
+    <!--
+      Expected earnings.
+
+      The numbers here are NOT fabricated: they are arithmetic on Dash Core v24
+      consensus, with every input cited in `mock.ts -> yieldModel`. The node
+      count is the single unsourced input (live network state, unreadable with
+      no node), so it is shown as an explicit assumption rather than hidden.
+      The fee is our product price, not a protocol constant.
+    -->
+    <section
+      class="mt-5 rounded-lg border border-titan-500/25 bg-titan-500/5 p-4"
+      data-earnings
+      data-assumed-nodes={String(yieldModel.assumedNodes)}
+    >
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-200">Expected earnings</h2>
+        <span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+          Model · {yieldModel.assumedNodes.toLocaleString()} nodes assumed
+        </span>
+      </div>
+
+      <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div data-earn="node-gross">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Node, gross</p>
+          <p class="mt-1 font-mono text-lg text-slate-100">
+            {dash4(nodeEarnings.grossPerYear)}
+          </p>
+          <p class="text-xs text-slate-500">{nodeEarnings.grossApy.toFixed(2)}% on 1,000 DASH</p>
+        </div>
+        <div data-earn="node-net">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Node, custodial</p>
+          <p class="mt-1 font-mono text-lg text-slate-100">
+            {dash4(nodeEarnings.netPerYear)}
+          </p>
+          <p class="text-xs text-slate-500">{nodeEarnings.netApy.toFixed(2)}% after {fees.custodialPercent}% fee</p>
+        </div>
+        <div data-earn="share-gross">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">125 DASH share, gross</p>
+          <p class="mt-1 font-mono text-lg text-slate-100">
+            {dash4(shareEarnings.grossPerYear)}
+          </p>
+          <p class="text-xs text-slate-500">{shareEarnings.grossApy.toFixed(2)}% on 125 DASH</p>
+        </div>
+        <div data-earn="share-net">
+          <p class="text-xs tracking-wide text-titan-300 uppercase">125 DASH share, custodial</p>
+          <p class="mt-1 font-mono text-lg text-white">
+            {dash4(shareEarnings.netPerYear)}
+          </p>
+          <p class="text-xs text-slate-500">{shareEarnings.netApy.toFixed(2)}% after {fees.custodialPercent}% fee</p>
+        </div>
+      </div>
+
+      <p class="mt-3 border-t border-titan-800/60 pt-2 text-xs leading-relaxed text-slate-500">
+        Per-block reward is fixed by consensus ({yieldModel.masternodeRewardNet.toFixed(6)} DASH net of the
+        {' '}{yieldModel.platformCut.toFixed(6)} DASH Platform cut). APY depends on the registered node count,
+        which is the assumption shown above — not a reading. {' '}
+        <a href="/rewards/" class="text-titan-300 underline decoration-dotted hover:text-titan-200">
+          Full breakdown
+        </a>
+      </p>
+    </section>
 
     <!--
       Charts. Both are MOCK; see src/lib/mock.ts. The trend answers "how much
@@ -89,7 +164,7 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
     <!-- Fleet table -->
     <div class="mt-6 overflow-hidden rounded-lg border border-titan-800">
       <table class="w-full text-left text-sm">
-        <thead class="bg-titan-900/80 text-[11px] tracking-wide text-slate-500 uppercase">
+        <thead class="bg-titan-900/80 text-xs tracking-wide text-slate-500 uppercase">
           <tr>
             <th scope="col" class="px-4 py-2.5 font-medium">Node</th>
             <th scope="col" class="px-4 py-2.5 font-medium">Status</th>
@@ -108,20 +183,20 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
                   <div class="flex items-center gap-2">
                     <span class="font-medium text-slate-100">{node.alias}</span>
                     {node.kind === 'evonode' && (
-                      <span class="rounded border border-titan-500/30 bg-titan-500/10 px-1.5 py-0.5 text-[10px] font-medium text-titan-300">
+                      <span class="rounded border border-titan-500/30 bg-titan-500/10 px-1.5 py-0.5 text-xs font-medium text-titan-300">
                         Evo
                       </span>
                     )}
                     {node.shares.length > 0 && (
                       <span
-                        class="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400"
+                        class="rounded border border-slate-700 px-1.5 py-0.5 text-xs text-slate-400"
                         title={`Shared by ${node.shares.length} owners`}
                       >
                         Shared ×{node.shares.length}
                       </span>
                     )}
                   </div>
-                  <p class="selectable mt-0.5 font-mono text-[10px] text-slate-600" title={node.proTxHash}>
+                  <p class="selectable mt-0.5 font-mono text-xs text-slate-600" title={node.proTxHash}>
                     {short(node.proTxHash)}
                   </p>
                 </td>
@@ -174,7 +249,7 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
                 aria-hidden="true"
               />
               <span class="text-slate-400">{entry.text}</span>
-              <span class="ml-auto shrink-0 font-mono text-[10px] text-slate-600">
+              <span class="ml-auto shrink-0 font-mono text-xs text-slate-600">
                 {entry.when.slice(11, 16)} UTC
               </span>
             </li>

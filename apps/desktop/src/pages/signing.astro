@@ -39,11 +39,11 @@ const humanise = (kind: string): string =>
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 class="text-sm font-semibold text-slate-100">{session.label}</h2>
-                    <p class="mt-0.5 text-[11px] text-slate-500">{humanise(session.kind)}</p>
+                    <p class="mt-0.5 text-xs text-slate-500">{humanise(session.kind)}</p>
                   </div>
 
                   <div class="text-right">
-                    <p class="text-[10px] tracking-wide text-slate-500 uppercase">
+                    <p class="text-xs tracking-wide text-slate-500 uppercase">
                       Human-checkable code
                     </p>
                     <p
@@ -55,7 +55,7 @@ const humanise = (kind: string): string =>
                   </div>
                 </div>
 
-                <p class="mt-3 text-[11px] leading-relaxed text-slate-500">
+                <p class="mt-3 text-xs leading-relaxed text-slate-500">
                   Confirm this code with each co-owner over a channel you trust before they sign.
                   Everyone must be signing the same session.
                 </p>
@@ -63,7 +63,7 @@ const humanise = (kind: string): string =>
 
               <!-- Progress -->
               <div class="px-4 py-3">
-                <div class="flex items-center justify-between text-[11px]">
+                <div class="flex items-center justify-between text-xs">
                   <span class="text-slate-400">
                     {session.collected} of {session.required} signatures collected
                   </span>
@@ -85,7 +85,7 @@ const humanise = (kind: string): string =>
                   <li class="flex items-center gap-3 px-4 py-2.5 text-xs" data-participant={share.owner}>
                     <span
                       class:list={[
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px]',
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs',
                         share.signed
                           ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
                           : 'border-titan-700 bg-titan-800/60 text-slate-500',
@@ -95,10 +95,10 @@ const humanise = (kind: string): string =>
                       {share.signed ? '✓' : '·'}
                     </span>
                     <span class="w-28 shrink-0 truncate font-medium text-slate-200">{share.owner}</span>
-                    <span class="font-mono text-[10px] text-slate-600">{share.keyId}</span>
+                    <span class="font-mono text-xs text-slate-600">{share.keyId}</span>
                     <span
                       class:list={[
-                        'ml-auto text-[10px] font-medium',
+                        'ml-auto text-xs font-medium',
                         share.signed ? 'text-emerald-400' : 'text-slate-500',
                       ]}
                     >
@@ -140,7 +140,7 @@ const humanise = (kind: string): string =>
       )
     }
 
-    <p class="mt-6 text-[11px] leading-relaxed text-slate-600">
+    <p class="mt-6 text-xs leading-relaxed text-slate-600">
       MOCK DATA. Signing is not implemented: src/lib/rpc.ts has no transport and no RPC has been
       verified against dashd. The buttons above are disabled for that reason, not to gate anything.
     </p>

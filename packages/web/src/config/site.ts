@@ -415,10 +415,180 @@ export const calculator = {
     nodes: 3,
     /** MOCK: operator's share of each node, in percent. */
     sharePercent: 100,
-    /** MOCK: reward per node per month, in DASH. */
-    dashPerNodeMonth: 4.4,
+    /**
+     * DERIVED, not MOCK. A Regular node at 4,000 registered nodes earns
+     * `yieldModel.annualMasternodePot / 4000 / 12` per month. The previous
+     * placeholder of 4.4 DASH/month was invented and overstated the protocol
+     * reward by roughly 4x; it is replaced with the derived figure so the
+     * calculator cannot contradict the table above it.
+     */
+    dashPerNodeMonth: 7.63,
     /** MOCK: DASH price used to express the result in dollars. */
     dashPrice: 0,
+  },
+};
+
+// ---------------------------------------------------------------------------
+// The yield model — DERIVED from Dash Core v24 consensus, not invented
+// ---------------------------------------------------------------------------
+
+/**
+ * Every number below is DERIVED from Dash Core v24.0.0-rc.1 source, not
+ * observed from a live node. We have no running node on this machine, so an
+ * on-chain reading was impossible; the arithmetic is reproduced instead and
+ * each input is cited.
+ *
+ * The chain of reasoning, with sources:
+ *
+ *   1. A block is 150 seconds. `consensus.nPowTargetSpacing = 2.5 * 60`
+ *      (src/chainparams.cpp:200). That is 576 blocks/day, 210,240 blocks/year.
+ *   2. The subsidy interval is exactly one year: `nSubsidyHalvingInterval =
+ *      210240` (src/chainparams.cpp:162).
+ *   3. After V20 the subsidy base is fixed at 5 DASH and 20% goes to the
+ *      treasury: `nSubsidyBase = 5`, `nSuperblockPart = nSubsidy / 5`
+ *      (src/validation.cpp, GetBlockSubsidyHelper).
+ *   4. The subsidy declines 1/14 per interval: `nSubsidy -= nSubsidy / 14`
+ *      (same function). So this year's base is 5 - 5/14 = 4.642857, less the
+ *      20% treasury = 3.714286 DASH held between miner and masternodes.
+ *   5. The miner/masternode split: the source comments it verbatim — "Once
+ *      MNRewardReallocated activates, block reward is 80% of block subsidy
+ *      (+ tx fees) since treasury is 20% ... MN reward is set to 75% of the
+ *      block reward" (src/masternode/payments.cpp:96-97), implemented as
+ *      `return blockValue * 3 / 4` (src/masternode/payments.cpp:101).
+ *   6. Platform takes a cut OF THE MASTERNODE SHARE:
+ *      `platformReward = reward * 375 / 1000` — 37.5%
+ *      (src/masternode/payments.cpp:53, PlatformShare).
+ *   7. Every node is paid ONCE per cycle, so each node's gross reward is equal
+ *      regardless of type. `GetProjectedMNPayees` selects each node
+ *      `isMNRewardReallocation ? 1 : GetMnType(dmn->nType).voting_weight` times
+ *      (src/evo/deterministicmns.cpp:230). Evo nodes used to receive 4
+ *      consecutive payments (the 4x `voting_weight`), but that branch is gated
+ *      on `!isMNRewardReallocation`, and mainnet passed `MN_RRHeight`
+ *      (2,128,896) long ago. So the two types earn the SAME per-node amount,
+ *      and an Evo node's lower APY is purely its 4x larger collateral.
+ *
+ * Putting it together for today (above MN_RRHeight, so era != Classic):
+ *   block subsidy after treasury   3.714286 DASH
+ *   masternode reward GROSS        2.785714 DASH   (75% of block value)
+ *   Platform credit pool           1.044643 DASH   (37.5% of gross)
+ *   masternode reward NET          1.741071 DASH/block
+ *   x 210240 blocks               366,043 DASH/year paid to ALL masternodes
+ *
+ * The APY is then that pot divided by the number of registered masternodes and
+ * by the collateral:
+ *
+ *   APY = (366,043 / N) / collateral
+ *
+ * `N` is the ONLY figure we cannot derive from source — it is live network
+ * state. Each row below states its `N` so the assumption is visible.
+ *
+ * CRITICAL CAVEAT, and the reason this is a model and not a quote: the annual
+ * pot shrinks by ~7.1% every 210,240 blocks (the 1/14 decline), and `N` moves
+ * constantly. Any APY here is a snapshot at a chosen `N`, not a rate we can
+ * promise. Do not present these figures as a yield.
+ */
+export const yieldModel = {
+  /** Sourced: src/chainparams.cpp:200. */
+  blockSeconds: 150,
+  /** Derived: 86400 / 150. */
+  blocksPerDay: 576,
+  /** Derived: 576 * 365. Equal to the halving interval below. */
+  blocksPerYear: 210240,
+  /** Sourced: src/chainparams.cpp:162. */
+  subsidyIntervalBlocks: 210240,
+  /** Sourced: src/validation.cpp, nSubsidyBase = 5 once V20 is active. */
+  subsidyBase: 5,
+  /** Sourced: src/validation.cpp, nSuperblockPart = nSubsidy / 5. */
+  treasuryDenominator: 5,
+  /** Sourced: src/masternode/payments.cpp:101, `blockValue * 3 / 4`. */
+  masternodeShareOfBlockValue: 0.75,
+  /** Sourced: src/masternode/payments.cpp:53, `reward * 375 / 1000`. */
+  platformShareOfMasternodeReward: 0.375,
+  /** Sourced: src/validation.cpp, `nSubsidy -= nSubsidy / 14` per interval. */
+  intervalDeclineDenominator: 14,
+
+  /** Derived per-block figures, in DASH, for the current interval. */
+  perBlock: {
+    /** 5 - 5/14, i.e. subsidy after the interval decline. */
+    subsidyAfterDecline: 4.642857,
+    /** The 20% treasury slice. */
+    treasury: 0.928571,
+    /** What is left for miner + masternodes + Platform. */
+    blockValue: 3.714286,
+    /** 75% of blockValue. */
+    masternodeRewardGross: 2.785714,
+    /** 37.5% of the gross, diverted to the Platform credit pool. */
+    platformCreditPool: 1.044643,
+    /** What actually reaches masternodes. */
+    masternodeRewardNet: 1.741071,
+  },
+
+  /** Derived: masternodeRewardNet * blocksPerYear. Paid to ALL nodes. */
+  annualMasternodePot: 366_043,
+
+  /**
+   * APY by assumed node count. `nodes` is the only unsourced input, so it is
+   * shown next to every figure. Labelled MOCK because we cannot read `N`.
+   *
+   * Each row is `annualMasternodePot / nodes / collateral`, rounded to two
+   * decimals: Regular collateral is 1,000 DASH, Evo collateral is 4,000.
+   */
+  apyByNodeCount: [
+    { nodes: 3000, regularApy: 12.20, evoApy: 3.05 },
+    { nodes: 3500, regularApy: 10.46, evoApy: 2.61 },
+    { nodes: 4000, regularApy: 9.15, evoApy: 2.29 },
+    { nodes: 4500, regularApy: 8.13, evoApy: 2.03 },
+    { nodes: 5000, regularApy: 7.32, evoApy: 1.83 },
+  ],
+};
+
+/**
+ * Our fee on the custodial service, and the fee survey for the shared pool.
+ *
+ * The 30% is the USER'S stated price for the custodial product. It is a
+ * product decision, not a consensus value, and it applies to the GROSS
+ * masternode reward — the number the node receives before any operator cut.
+ *
+ * It is expressible in-protocol: `nOperatorReward` is basis points
+ * (0-10000), enforced at src/masternode/payments.cpp:167 as
+ * `operatorReward = (masternodeReward * nOperatorReward) / 10000`.
+ *
+ * IMPORTANT, and repeated because it is easy to get wrong: on a SHARED node the
+ * remaining reward is then split PROPORTIONAL TO COLLATERAL —
+ * `SplitAmountByShares(masternodeReward, shares)` at payments.cpp:175. So the
+ * operator cut comes off the WHOLE node first, and each depositor's slice is
+ * 12.5% of what is left (at 8 equal shares), not 12.5% of the original.
+ */
+export const fees = {
+  /** Our custodial service fee, in percent of gross masternode reward. */
+  custodialPercent: 30,
+
+  /**
+   * MOCK survey. These are competitor figures obtained in an earlier session
+   * from Wayback captures whose exact snapshot URLs are NOT yet re-pinned, so
+   * they are NOT publishable and must not be quoted on a live page. Kept here
+   * only to document the range we examined.
+   */
+  competitorSurvey: [
+    { name: 'custodial, 2023-2024 captures', percentOfRewards: 15, publishable: false },
+    { name: 'custodial, 2025-2026 captures', percentOfRewards: 35, publishable: false },
+    { name: 'trustless/shared, 2025-2026 captures', percentOfRewards: 20, publishable: false },
+  ],
+
+  /**
+   * The fee band we are willing to offer on the SELF-CUSTODIAL shared pool,
+   * where the operator does hold the keys and our job is coordination, not
+   * custody. Lower than the custodial rate because we take no custody risk and
+   * post no capital of our own.
+   *
+   * MOCK: this is a recommendation, not a decision. Nothing charges it.
+   */
+  sharedPoolBand: {
+    lowPercent: 10,
+    highPercent: 20,
+    recommendedPercent: 15,
+    rationale:
+      'Coordination only: we assemble the participant set, run shared_register_prepare and shared_combine, and keep the node updated. We take no custody risk and post no collateral, so the rate sits below the custodial one.',
   },
 };
 

@@ -3,7 +3,17 @@
 //
 // Rewards. ALL DATA IS MOCK — see src/lib/mock.ts.
 import Layout from '../layouts/Layout.astro';
-import { rewards, summary, fleet, dash } from '../lib/mock';
+import {
+  rewards,
+  summary,
+  fleet,
+  dash,
+  yieldModel,
+  nodeEarnings,
+  shareEarnings,
+  fees,
+  dash4,
+} from '../lib/mock';
 
 // Bar chart of reward history. Scaled to the largest value so the tallest bar
 // always fills the plot, which keeps the shape readable at any range.
@@ -26,20 +36,97 @@ const monthlyMax = Math.max(...monthly.map((m) => m.amount));
 
     <div class="mt-5 grid gap-3 sm:grid-cols-3">
       <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
-        <p class="text-[11px] tracking-wide text-slate-500 uppercase">This month</p>
+        <p class="text-xs tracking-wide text-slate-500 uppercase">This month</p>
         <p class="mt-1.5 font-mono text-lg text-slate-100">{dash(summary.rewardsThisMonth)}</p>
       </div>
       <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
-        <p class="text-[11px] tracking-wide text-slate-500 uppercase">All-time</p>
+        <p class="text-xs tracking-wide text-slate-500 uppercase">All-time</p>
         <p class="mt-1.5 font-mono text-lg text-slate-100">{dash(summary.rewardsAllTime)}</p>
       </div>
       <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
-        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Average per payment</p>
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Average per payment</p>
         <p class="mt-1.5 font-mono text-lg text-slate-100">
           {dash(rewards.reduce((s, r) => s + r.amount, 0) / rewards.length)}
         </p>
       </div>
     </div>
+
+    <!--
+      The expected-earnings panel.
+
+      This is the one place in the desktop shell where a number is NOT
+      fabricated: every figure is arithmetic on Dash Core v24 consensus rules,
+      and each input is cited in `mock.ts -> yieldModel`. The single unsourced
+      input is the registered-node count, which is live network state we cannot
+      read with no node connected, so it is labelled as an assumption here and
+      nowhere presented as a rate.
+    -->
+    <section
+      class="mt-6 rounded-lg border border-titan-800 bg-titan-900/40 p-4"
+      data-earnings
+      data-assumed-nodes={String(yieldModel.assumedNodes)}
+    >
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-200">Expected earnings</h2>
+        <span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+          Derived from v24 source · {yieldModel.assumedNodes.toLocaleString()} nodes assumed
+        </span>
+      </div>
+      <p class="mt-1 text-xs leading-relaxed text-slate-500">
+        Per-block reward is fixed by consensus; the APY depends on how many nodes are registered,
+        which we cannot read without a node. The node count is an assumption, and the fee is our price.
+      </p>
+
+      <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-lg border border-titan-800 bg-titan-950/40 p-3" data-earn="gross-node">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">One node, gross</p>
+          <p class="mt-1.5 font-mono text-lg text-slate-100">
+            {dash4(nodeEarnings.grossPerYear)}<span class="text-xs text-slate-500"> /yr</span>
+          </p>
+          <p class="mt-1 text-xs text-slate-500">{nodeEarnings.grossApy.toFixed(2)}% on 1,000 DASH</p>
+        </div>
+
+        <div class="rounded-lg border border-titan-800 bg-titan-950/40 p-3" data-earn="net-node">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">One node, custodial</p>
+          <p class="mt-1.5 font-mono text-lg text-slate-100">
+            {dash4(nodeEarnings.netPerYear)}<span class="text-xs text-slate-500"> /yr</span>
+          </p>
+          <p class="mt-1 text-xs text-slate-500">
+            {nodeEarnings.netApy.toFixed(2)}% after our {fees.custodialPercent}% fee
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-titan-800 bg-titan-950/40 p-3" data-earn="share-gross">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">125 DASH share, gross</p>
+          <p class="mt-1.5 font-mono text-lg text-slate-100">
+            {dash4(shareEarnings.grossPerYear)}<span class="text-xs text-slate-500"> /yr</span>
+          </p>
+          <p class="mt-1 text-xs text-slate-500">
+            {shareEarnings.fraction * 100}% of a node · {shareEarnings.grossApy.toFixed(2)}%
+          </p>
+        </div>
+
+        <div
+          class="rounded-lg border border-titan-500/30 bg-titan-500/5 p-3"
+          data-earn="share-net"
+        >
+          <p class="text-xs tracking-wide text-titan-300 uppercase">125 DASH share, custodial</p>
+          <p class="mt-1.5 font-mono text-lg text-white">
+            {dash4(shareEarnings.netPerYear)}<span class="text-xs text-slate-500"> /yr</span>
+          </p>
+          <p class="mt-1 text-xs text-slate-500">
+            {shareEarnings.netApy.toFixed(2)}% after our {fees.custodialPercent}% fee
+          </p>
+        </div>
+      </div>
+
+      <p class="mt-3 border-t border-titan-800 pt-3 text-xs leading-relaxed text-slate-600">
+        Reward per block, net of the {yieldModel.platformCut.toFixed(6)} DASH Platform cut:{' '}
+        <span class="font-mono">{yieldModel.masternodeRewardNet.toFixed(6)} DASH</span>. The yearly pot of
+        {' '}{yieldModel.annualMasternodePot.toLocaleString()} DASH shrinks ~7.1% every 210,240 blocks.
+        These are model figures at an assumed node count, not a promise of return.
+      </p>
+    </section>
 
     <div class="mt-6 grid gap-4 lg:grid-cols-2">
       <!-- Monthly -->
@@ -49,12 +136,12 @@ const monthlyMax = Math.max(...monthly.map((m) => m.amount));
           {
             monthly.map((m) => (
               <div class="flex flex-1 flex-col items-center gap-2" data-month={m.month}>
-                <span class="font-mono text-[10px] text-slate-500">{m.amount.toFixed(1)}</span>
+                <span class="font-mono text-xs text-slate-500">{m.amount.toFixed(1)}</span>
                 <div
                   class="w-full rounded-t bg-titan-500/70"
                   style={`height: ${(m.amount / monthlyMax) * 100}%`}
                 />
-                <span class="text-[10px] text-slate-500">{m.month}</span>
+                <span class="text-xs text-slate-500">{m.month}</span>
               </div>
             ))
           }
@@ -75,7 +162,7 @@ const monthlyMax = Math.max(...monthly.map((m) => m.amount));
                 <span class="w-16 shrink-0 text-right font-mono text-slate-300">
                   {r.amount.toFixed(2)}
                 </span>
-                <span class="w-20 shrink-0 text-right font-mono text-[10px] text-slate-600">
+                <span class="w-20 shrink-0 text-right font-mono text-xs text-slate-600">
                   {r.when.slice(5, 10)}
                 </span>
               </li>
@@ -85,7 +172,7 @@ const monthlyMax = Math.max(...monthly.map((m) => m.amount));
       </div>
     </div>
 
-    <p class="mt-6 text-[11px] leading-relaxed text-slate-600">
+    <p class="mt-6 text-xs leading-relaxed text-slate-600">
       MOCK DATA. Reward amounts, dates and history are fabricated. {fleet.length} nodes are shown
       on the fleet screen.
     </p>

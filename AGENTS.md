@@ -72,16 +72,43 @@ Conventions that file follows, and that new entries must keep:
 
 ## The custodial layer (PLANNED — NOT LIVE)
 
-`custodial` in `packages/web/src/config/site.ts` is a placeholder for a future custodial entry point at **1 DASH**, waitlisted at launch, gated behind `available: false`.
+`custodial` in `packages/web/src/config/site.ts` is a placeholder for a future custodial entry point, **waitlisted at launch**, gated behind `available: false`. The desktop mirror is `custodialPool` in `apps/desktop/src/lib/mock.ts` and the screen `apps/desktop/src/pages/custodial.astro`.
 
 Rules:
 
 - **It is Rank 0, not a new Rank I.** The numbered ladder describes collateral the operator actually holds; the custodial layer is the opposite arrangement. Presenting it as a rung would imply the same ownership.
+- **"Custodial" names THIS SERVICE ONLY.** The ordinary shared masternode is **self-custodial** — every share owner holds their own key. Do not use the word "custodial" for the shared pool, and do not use "self-custodial" for this service. A screen that swaps the two is factually wrong about who holds the keys.
+- **The service accepts ANY amount.** Because we form the on-chain shares from pooled deposits, the protocol floor of 100 DASH per share (`CCollateralShare::MIN_AMOUNT`, src/evo/providertx.h:58) is a rule WE satisfy internally. It is not a floor a depositor has to meet. Do not add a minimum to this screen or to `site.ts`.
+- **The waitlist lives at OUR SERVICE LEVEL.** It is an off-chain list we keep; no Dash RPC exposes a waitlist. Never present it as a protocol feature.
 - **Do not flip `available` to `true`** until a licensed arrangement exists. No deposit address is published and none should be.
-- **Do not invent a date.** `waitingOn` lists conditions (a licence, 1,000 DASH of pooled deposits), not a schedule.
-- **Custody is stated, never implied.** The trade-off list says we hold the collateral, the user does not hold the keys, and withdrawal depends on our liquidity. Keep that list; a page that hides the trade-off misleads.
+- **Do not invent a date.** `waitingOn` / `blockedBy` list conditions (a licence, 1,000 DASH of pooled deposits), not a schedule.
+- **Custody is stated, never implied.** The trade-off list says we hold the collateral, we form the shares, the user does not hold the keys, and withdrawal depends on our liquidity. Keep that list; a page that hides the trade-off misleads.
 - **The waitlist is the only affordance**, and it is disabled with an empty `endpoint`. A placeholder URL that appears to accept a signup is worse than a disabled button, because the user believes they joined.
 - **Do not describe this as "licensing a masternode."** Dash has no masternode licensing. The mechanic is pooling deposits and operating a node on depositors' behalf. Write that, not a protocol claim.
+- **Say SHARE, never "slot".** The protocol term is `CCollateralShare` / `CollateralShares`. "Slot" appears nowhere in the protocol.
+
+### `nOperatorReward` on a shared node (VERIFIED)
+
+The shared-pool fee mechanism is now closed end-to-end:
+
+- `nOperatorReward` exists **only in `CProRegTx`** and is **immutable after registration**. `shared_register_prepare` takes it as param 5 (0–10000 bp) and there is **no operator-payout-address argument**.
+- `PrepareSharedRegistration` sets `nOperatorReward` but never sets `scriptOperatorPayout`, and `CDeterministicMNState(const CProRegTx&)` does not copy one, so it defaults to empty `CScript()`. `src/masternode/payments.cpp` pays the operator **only when `nOperatorReward != 0 && scriptOperatorPayout != CScript()`** — therefore **`nOperatorReward` alone is inert** on a shared node and the reward folds into the share split.
+- **`protx update_service` CAN set the payout on a shared node.** `protx_update_service_common_wrapper` (src/rpc/evo.cpp:1049) has **no** shared-node guard — it parses the payout address unchecked and delegates to `evo::provider::UpdateService`.
+- **`UpdateService` (src/evo/providertx_service.cpp:788) has no `IsShared()` rejection**, unlike `UpdateRegistrar` (same file:868), which explicitly refuses shared nodes. So ProUpServTx is allowed on a shared node.
+- **Consensus accepts it too**: `CheckProUpServTx` / `ApplyProUpServTx` (src/evo/specialtxman.cpp:110, :1326) have no shared guard; `ApplyProUpServTx` copies `state_mn.scriptOperatorPayout = proTx.scriptOperatorPayout` (line 120). The only gate is `bad-protx-operator-payee` (line ~1396): the payout script must be P2PKH or P2SH, and `nOperatorReward` must be non-zero — which it can be, because `shared_register_prepare` set it.
+- **Conclusion:** a shared-pool operator fee is payable, but only via a later `protx update_service` that supplies the payout address. It cannot be set at registration.
+
+### Fees
+
+Wayback-sourced competitor figures (CrowdNode) are **not publishable** until the exact snapshot URLs are re-pinned. Do not quote a competitor percentage without a live, citable source.
+
+### The 125 figure
+
+The 125-per-depositor figure is **our product choice, not consensus**. Only the floor (100 DASH) and ceiling (8 shares) are protocol constants. Phrase it as our arithmetic, never as a protocol rule.
+
+### Release versioning
+
+The desktop version appears in **six** places and they must move together: `apps/desktop/package.json`, `apps/desktop/src-tauri/tauri.conf.json`, `apps/desktop/src-tauri/Cargo.toml`, `apps/desktop/src-tauri/Cargo.lock`, `apps/desktop/src/components/StatusBar.astro` (`appVersion`), and `apps/desktop/src/pages/settings.astro` (`data-setting="version"`). `26.9.26` is the first release carrying Profile, Settings, the two charts, the custodial screen, the shared-RPC seam, and the shares-not-slots wording.
 
 ## Charting
 
@@ -117,6 +144,42 @@ Verify UI by:
 - `curl` against the dev server, checking for expected markers in the returned HTML.
 - Process state (`ps -o stat,nlwp,rss`) to confirm the webview initialized rather than crash-looping.
 
+## Legibility floor
+
+**No text renders below 13px**, on any surface.
+
+- Tailwind's default `text-xs` is **12px**, which is under the floor. The floor is applied by overriding the token in the theme — `--text-xs: 0.8125rem;` (13px) — at the top of `apps/desktop/src/styles/global.css` and `packages/web/src/styles/global.css`. Overriding the token is what lifts every existing `text-xs` at once.
+- The mechanical pass removed `text-[9px]`, `text-[10px]` and `text-[11px]`. Do not reintroduce them. If a layout needs smaller text, the layout is wrong.
+- **Do not invent CSS.** `min-font-size` is not a real property; a fix that relies on it does nothing. Verify with computed style in a browser, not by reading the class list.
+- Verify by measuring: `getComputedStyle(el).fontSize` over every text-bearing element must have a minimum of `13px`.
+
+## The earnings model
+
+The reward figures are **derived from consensus**, not observed. There is no node, so no on-chain reading is possible; instead the arithmetic is reproduced and every input is cited in `packages/web/src/config/site.ts` (`yieldModel`) and `apps/desktop/src/lib/mock.ts` (`yieldModel`, `nodeEarnings`, `shareEarnings`, `fees`).
+
+Verified inputs, Dash Core `v24.0.0-rc.1`:
+
+| Input | Value | Source |
+|---|---|---|
+| block time | 150 s | `src/chainparams.cpp:200` (`nPowTargetSpacing = 2.5 * 60`) |
+| blocks / year | 210,240 | `src/chainparams.cpp:162` (`nSubsidyHalvingInterval`) |
+| subsidy base | 5 DASH | `src/validation.cpp` (`nSubsidyBase`, V20+) |
+| treasury | 20% | `src/validation.cpp` (`nSuperblockPart = nSubsidy / 5`) |
+| interval decline | 1/14 | `src/validation.cpp` (`nSubsidy -= nSubsidy / 14`) |
+| MN share of block value | 75% | `src/masternode/payments.cpp:101` (`blockValue * 3 / 4`) |
+| Platform cut of MN share | 37.5% | `src/masternode/payments.cpp:53` (`reward * 375 / 1000`) |
+| payments per node per cycle | 1 | `src/evo/deterministicmns.cpp:230` (`isMNRewardReallocation ? 1 : voting_weight`) |
+
+**Evo and Regular nodes are paid the same per-node amount.** The 4× `voting_weight` on Evo nodes is gated behind `!isMNRewardReallocation` (`src/evo/deterministicmns.cpp:167`), and mainnet passed `MN_RRHeight` (2,128,896) long ago. Evo's lower APY in the table is therefore **only** its 4× larger collateral — not a smaller payment. Do not describe it as Evo earning less.
+
+Derived: block value `3.714286` — MN gross `2.785714` — Platform `1.044643` — MN net `1.741071` DASH/block — **366,043 DASH/year to all masternodes**.
+
+- **The node count is the only unsourced input.** It is exposed as a control on the web and labelled `assumedNodes` on the desktop. Never hide it.
+- APY is `annualMasternodePot / nodes / collateral` (Regular 1,000 DASH, Evo 4,000). The pot **shrinks ~7.1% every 210,240 blocks**. This is a model, not a yield.
+- **Earnings figures use 4 decimals** (`dash4`), never the 8-decimal `dash()`. Eight decimals claims precision the model does not have.
+- Fees: the **custodial service fee is 30%** (a product price the user set), applied to the **gross** node reward. The **shared-pool operator fee** is a **recommendation of 10–20%, 15% suggested** — lower, because we take no custody risk and post no collateral. Neither figure is consensus.
+- On a shared node the operator cut comes off the **whole node** before the split, and the remainder is split **by collateral** (`SplitAmountByShares`). A 125 DASH deposit is 12.5% of a 1,000 DASH node's reward — not 12.5% of the post-fee remainder.
+
 ## Mock data
 
 All desktop data is mock and lives in `apps/desktop/src/lib/mock.ts`, behind a file header stating so.
@@ -132,6 +195,7 @@ All desktop data is mock and lives in `apps/desktop/src/lib/mock.ts`, behind a f
 ## Marketing copy constraints
 
 - **Payments are DASH and Dash USDC only.** No third-party processor. Dash USDC is `available: false` until it exists.
+- **Never state an unsourced number, including a rate.** An APY is not publishable as a fact: it depends on the registered-node count, which is live network state we cannot read without a node. Publish the **derivation** instead, label the node count as an assumption, and keep the fee a visibly separate product price.
 - **Titan PRO is $5.00/month**, formatted through the `money()` helper so it never renders `$5.5`.
 - The **rank ladder is ours**, not protocol. Requirements are consensus; names are not.
 - Mock content is isolated in `packages/web/src/config/site.ts` and marked. Do not bury invented claims in components.

@@ -2,6 +2,22 @@
 @import 'tailwindcss';
 
 /*
+ * LEGIBILITY FLOOR: 13px.
+ *
+ * No text in this app may render below 13px. The shell is dense — a sidebar,
+ * a status bar and tables of hashes — and it is easy to reach for `text-xs`
+ * to make a value fit. Do not. A desktop window is 1440x900 by default (see
+ * tauri.conf.json) and at that size 9px and 10px are unreadable on a normal
+ * display.
+ *
+ * Use `text-[13px]` as the floor for the smallest labels and captions that used
+ * to be `text-xs`, `text-xs`, `text-xs` or `text-xs`. Tailwind's
+ * `text-xs` (12px) is therefore also below the floor and must not be used for
+ * legible content. The only exemption is decorative glyph furniture that is
+ * already aria-hidden, and even then prefer a real size.
+ */
+
+/*
  * The desktop window is a fixed piece of furniture, not a scrolling web page.
  * The shell fills the viewport and only the content area scrolls, so the
  * sidebar and status bar stay put.
@@ -14,6 +30,16 @@
   --color-titan-500: oklch(0.58 0.16 274);
   --color-titan-400: oklch(0.68 0.16 274);
   --color-titan-300: oklch(0.78 0.12 274);
+
+  /*
+   * LEGIBILITY FLOOR: 13px. See the note at the top of this file. Tailwind's
+   * default `text-xs` is 12px, which is unreadable in a dense desktop shell at
+   * the default 1440x900 window size. The mechanical pass that removed the
+   * `text-[9px]` / `text-[10px]` / `text-[11px]` tokens left everything on
+   * `text-xs`, so raising the token here is what actually lifts the floor.
+   */
+  --text-xs: 0.8125rem; /* 13px */
+  --text-xs--line-height: 1.25rem;
 }
 
 html,

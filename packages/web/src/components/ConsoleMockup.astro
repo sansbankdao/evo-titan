@@ -53,7 +53,7 @@ const typeStyles: Record<string, string> = {
       <span class="h-2.5 w-2.5 rounded-full bg-emerald-400/70" aria-hidden="true"></span>
       <span class="ml-3 font-mono text-xs text-slate-500">evo-titan — shared masternode</span>
       <span
-        class="ml-auto rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-amber-300 uppercase"
+        class="ml-auto rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium tracking-wide text-amber-300 uppercase"
         >Mock</span
       >
     </div>
@@ -61,8 +61,8 @@ const typeStyles: Record<string, string> = {
     <!-- Signature collection panel: the headline feature. -->
     <div class="border-b border-slate-700/50 px-4 py-4">
       <div class="flex items-center justify-between">
-        <p class="text-[11px] tracking-wide text-slate-500 uppercase">Collect signatures</p>
-        <p class="font-mono text-[11px]">
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Collect signatures</p>
+        <p class="font-mono text-xs">
           <span class={signedCount === shares.length ? 'text-emerald-300' : 'text-amber-300'}>
             {signedCount}/{shares.length}
           </span>
@@ -75,7 +75,7 @@ const typeStyles: Record<string, string> = {
           shares.map((share) => (
             <li class="flex items-center gap-3">
               <span
-                class={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[10px] ${
+                class={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
                   share.signed
                     ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
                     : 'border-slate-600 bg-slate-800/60 text-slate-600'
@@ -87,7 +87,7 @@ const typeStyles: Record<string, string> = {
               <span class="w-24 shrink-0 truncate text-xs text-slate-300">
                 {share.name}
               </span>
-              <span class="hidden w-28 shrink-0 font-mono text-[10px] text-slate-600 sm:inline">
+              <span class="hidden w-28 shrink-0 font-mono text-xs text-slate-600 sm:inline">
                 {share.key}
               </span>
               <span class="ml-auto font-mono text-xs text-slate-400">
@@ -100,14 +100,14 @@ const typeStyles: Record<string, string> = {
       </ul>
 
       <div class="mt-3 flex items-center justify-between border-t border-slate-800/60 pt-3">
-        <p class="font-mono text-[10px] text-slate-600">collateral = 1,000 DASH (consensus)</p>
+        <p class="font-mono text-xs text-slate-600">collateral = 1,000 DASH (consensus)</p>
         <p class="font-mono text-xs text-slate-300">{total} DASH</p>
       </div>
     </div>
 
     <!-- Fleet table. -->
     <table class="w-full text-left font-mono text-xs">
-      <thead class="text-[10px] tracking-wide text-slate-500 uppercase">
+      <thead class="text-xs tracking-wide text-slate-500 uppercase">
         <tr class="border-b border-slate-700/50">
           <th scope="col" class="px-4 py-2 font-medium">Node</th>
           <th scope="col" class="hidden px-4 py-2 font-medium sm:table-cell">Type</th>
@@ -124,10 +124,10 @@ const typeStyles: Record<string, string> = {
                   <span class={`h-1.5 w-1.5 shrink-0 rounded-full ${statusStyles[node.status]}`} aria-hidden="true" />
                   <span class="text-slate-300">{node.name}</span>
                 </span>
-                <span class="mt-0.5 block pl-3.5 text-[10px] text-slate-600 sm:hidden">{node.type}</span>
+                <span class="mt-0.5 block pl-3.5 text-xs text-slate-600 sm:hidden">{node.type}</span>
               </td>
               <td class="hidden px-4 py-2.5 sm:table-cell">
-                <span class={`rounded border px-1.5 py-0.5 text-[10px] ${typeStyles[node.type]}`}>{node.type}</span>
+                <span class={`rounded border px-1.5 py-0.5 text-xs ${typeStyles[node.type]}`}>{node.type}</span>
               </td>
               <td class="hidden px-4 py-2.5 text-slate-400 sm:table-cell">{node.peers}</td>
               <td class="px-4 py-2.5 text-slate-400">{node.status}</td>

@@ -29,20 +29,20 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-sm font-semibold text-slate-200">Connection</h2>
         <span
-          class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300"
+          class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300"
           data-connection-status="not-implemented"
         >
           RPC not implemented
         </span>
       </div>
-      <p class="mt-1 text-[11px] leading-relaxed text-slate-500">
+      <p class="mt-1 text-xs leading-relaxed text-slate-500">
         These are the fields a dashd connection will need. They are shown for layout only —
         nothing is dialled, and the values below are not read by any code yet.
       </p>
 
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
         <label class="block" data-setting="host">
-          <span class="text-[11px] tracking-wide text-slate-500 uppercase">Host</span>
+          <span class="text-xs tracking-wide text-slate-500 uppercase">Host</span>
           <input
             type="text"
             value={rpcSettings.host}
@@ -52,7 +52,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
         </label>
 
         <label class="block" data-setting="port">
-          <span class="text-[11px] tracking-wide text-slate-500 uppercase">Port</span>
+          <span class="text-xs tracking-wide text-slate-500 uppercase">Port</span>
           <input
             type="text"
             value={rpcSettings.port}
@@ -62,7 +62,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
         </label>
 
         <label class="block" data-setting="user">
-          <span class="text-[11px] tracking-wide text-slate-500 uppercase">RPC user</span>
+          <span class="text-xs tracking-wide text-slate-500 uppercase">RPC user</span>
           <input
             type="text"
             value={rpcSettings.user}
@@ -72,7 +72,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
         </label>
 
         <label class="block" data-setting="password">
-          <span class="text-[11px] tracking-wide text-slate-500 uppercase">RPC password</span>
+          <span class="text-xs tracking-wide text-slate-500 uppercase">RPC password</span>
           <!--
             The password is never rendered, not even as a mock value. The field
             shows only whether one is set, so no secret-looking string is ever
@@ -84,13 +84,13 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
             disabled
             class="mt-1 w-full cursor-not-allowed rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-400"
           />
-          <span class="mt-0.5 block text-[10px] text-slate-600">
+          <span class="mt-0.5 block text-xs text-slate-600">
             {rpcSettings.passwordSet ? 'A password is set for this profile' : 'No password set'}
           </span>
         </label>
 
         <label class="block" data-setting="tls">
-          <span class="text-[11px] tracking-wide text-slate-500 uppercase">TLS</span>
+          <span class="text-xs tracking-wide text-slate-500 uppercase">TLS</span>
           <input
             type="text"
             value={rpcSettings.tls ? 'Enabled' : 'Disabled'}
@@ -100,7 +100,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
         </label>
 
         <label class="block" data-setting="timeout">
-          <span class="text-[11px] tracking-wide text-slate-500 uppercase">Timeout</span>
+          <span class="text-xs tracking-wide text-slate-500 uppercase">Timeout</span>
           <input
             type="text"
             value={`${rpcSettings.timeoutMs.toLocaleString()} ms`}
@@ -133,7 +133,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
     <!-- Notifications -->
     <section class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="notifications">
       <h2 class="text-sm font-semibold text-slate-200">Notifications</h2>
-      <p class="mt-0.5 text-[11px] text-slate-500">
+      <p class="mt-0.5 text-xs text-slate-500">
         Delivery is not implemented — no mail or push transport exists yet.
       </p>
       <div class="mt-2">
@@ -144,7 +144,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
     <!-- Application -->
     <section class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="application">
       <h2 class="text-sm font-semibold text-slate-200">Application</h2>
-      <p class="mt-0.5 text-[11px] text-slate-500">
+      <p class="mt-0.5 text-xs text-slate-500">
         Only settings that already affect this build are enabled.
       </p>
       <div class="mt-2">
@@ -158,7 +158,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
       <dl class="mt-3 space-y-2.5 text-xs">
         <div class="flex justify-between gap-4">
           <dt class="text-slate-500">Version</dt>
-          <dd class="font-mono text-slate-300" data-setting="version">26.9.25</dd>
+          <dd class="font-mono text-slate-300" data-setting="version">26.9.26</dd>
         </div>
         <div class="flex justify-between gap-4">
           <dt class="text-slate-500">Data source</dt>

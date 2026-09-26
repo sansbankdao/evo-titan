@@ -1,2 +1,16 @@
 /* packages/web/src/styles/global.css — Evo Titan */
 @import 'tailwindcss';
+
+/*
+ * LEGIBILITY FLOOR: 13px.
+ *
+ * Nothing on this site renders below 13px. Tailwind's default `text-xs` is
+ * 12px, which is too small for the small print that carries real meaning here
+ * (protocol citations, fee terms, the custody disclosure). Raising the token in
+ * the theme fixes every existing `text-xs` at once, and new markup can keep
+ * using the familiar class.
+ */
+@theme {
+  --text-xs: 0.8125rem; /* 13px */
+  --text-xs--line-height: 1.25rem;
+}
