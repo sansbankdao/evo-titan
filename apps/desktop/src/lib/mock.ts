@@ -431,6 +431,118 @@ export const appPrefs: Preference[] = [
   { id: 'ap4', label: 'Show testnet nodes', help: 'Include testnet nodes in the fleet list.', enabled: false, available: false },
 ];
 
+// ---------------------------------------------------------------------------
+// CUSTODIAL POOL (MOCK)
+// ---------------------------------------------------------------------------
+//
+// The custodial layer is Rank 0 — see packages/web/src/config/site.ts. It is
+// PLANNED and NOT OPEN. Everything below is invented so the screen can be
+// designed, EXCEPT the protocol constants, which are sourced.
+//
+// The pool arithmetic is the whole design, so it is worth stating plainly:
+//
+//   125 DASH per depositor x 8 depositors = 1,000 DASH = one Regular collateral.
+//
+// 8 is `protocol.maxShares`. This is a coincidence of the numbers, not a rule:
+// deposits are not fixed at 125, and a pool could be filled with uneven
+// amounts. But 125 x 8 landing exactly on the collateral is why the figure is
+// legible as a target, so the screen shows the arithmetic rather than hiding it.
+//
+// A pool registers ONE Regular masternode. Shared collateral can NEVER be an
+// Evo node: Dash Core rejects it with `bad-protx-shares-evo`
+// (src/evo/providertx.cpp:280). The pool is a doorway to Rank I, not a path to
+// Rank IV.
+
+/** MOCK. One depositor in the custodial pool. */
+export interface PoolDepositor {
+  /** MOCK. Display name. */
+  owner: string;
+  /** MOCK. Deposited amount, in DASH. Not fixed — 125 is the target, not a rule. */
+  amount: number;
+  /** MOCK. ISO date the deposit was confirmed. */
+  since: string;
+  /** MOCK. Whether this is the operator viewing the screen. */
+  you?: boolean;
+}
+
+/** MOCK. A custodial pool being assembled toward one masternode. */
+export interface Pool {
+  /** MOCK. Internal id. */
+  id: string;
+  /** MOCK. Display name for the pool. */
+  name: string;
+  /**
+   * Sourced shape: one Regular node is `protocol.regularCollateral`. Shared
+   * collateral is Regular-only, so this is always 1,000.
+   */
+  targetCollateral: number;
+  /** MOCK. Deposit amounts actually received so far. */
+  depositors: PoolDepositor[];
+  /** MOCK. Lifecycle state. */
+  status: 'filling' | 'ready' | 'operating' | 'waitlisted';
+  /** MOCK. Plain-language explanation of `status`. */
+  statusNote: string;
+  /**
+   * MOCK. Conditions blocking the next step, phrased as conditions and never
+   * as dates. A date here would be a promise nobody can keep.
+   */
+  blockedBy: string[];
+}
+
+/**
+ * MOCK. The operator's own custodial position.
+ *
+ * `waitlisted: true` is the honest state: the layer is not open, so this
+ * represents the shape of the screen, not a deposit that exists.
+ */
+export const custodialPool: Pool = {
+  id: 'pool-01',
+  name: 'Titan Pool One',
+  targetCollateral: protocol.regularCollateral,
+  status: 'filling',
+  statusNote:
+    'Planned and not open. The figures below show how a pool will be tracked once the arrangement exists — no deposit has been taken.',
+  depositors: [
+    { owner: 'You', amount: 125, since: '2026-09-02', you: true },
+    { owner: 'harborlight', amount: 125, since: '2026-09-04' },
+    { owner: 'northgate', amount: 125, since: '2026-09-07' },
+    { owner: 'kestrel', amount: 125, since: '2026-09-11' },
+    { owner: 'juniper', amount: 125, since: '2026-09-15' },
+  ],
+  blockedBy: [
+    'A licensed custodial arrangement in the jurisdictions we serve.',
+    'The remaining deposits to reach 1,000 DASH of pooled collateral.',
+  ],
+};
+
+/** MOCK. The pool the screen is designed against, derived from `custodialPool`. */
+export const poolProgress = ((): {
+  raised: number;
+  target: number;
+  pct: number;
+  remaining: number;
+  /** How many more even deposits of `ticketSize` would complete the pool. */
+  ticketsRemaining: number;
+  ticketSize: number;
+  /** Sourced ceiling: a pool can never have more than `protocol.maxShares` depositors. */
+  maxDepositors: number;
+} => {
+  const raised = custodialPool.depositors.reduce((s, d) => s + d.amount, 0);
+  const target = custodialPool.targetCollateral;
+  // The suggested deposit size that would land the pool on the collateral in
+  // the fewest remaining slots. 125 is the mock's target, not a protocol value.
+  const ticketSize = 125;
+  return {
+    raised,
+    target,
+    pct: (raised / target) * 100,
+    remaining: target - raised,
+    ticketsRemaining: Math.ceil((target - raised) / ticketSize),
+    ticketSize,
+    maxDepositors: protocol.maxShares,
+  };
+})();
+
 /** MOCK. Format a DASH amount consistently. */
 export const dash = (n: number): string =>
   `${n.toLocaleString(undefined, { maximumFractionDigits: 8 })} DASH`;

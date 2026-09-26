@@ -25,6 +25,12 @@ const accountItems = [
   { id: 'profile', label: 'Profile', href: '/profile' },
   { id: 'settings', label: 'Settings', href: '/settings' },
 ];
+
+// Rank 0 sits in its own group, below a rule, and is labelled as planned. It is
+// not a sixth entry in the fleet list: custody is the opposite ownership
+// arrangement to every node view above it, and filing it alongside them would
+// imply the operator holds collateral they do not hold.
+const custodialItem = { id: 'custodial', label: 'Custodial pool', href: '/custodial', planned: true };
 ---
 
 <aside class="flex w-56 shrink-0 flex-col border-r border-titan-800 bg-titan-900">
@@ -62,6 +68,27 @@ const accountItems = [
         );
       })
     }
+
+    <div class="my-1.5 border-t border-titan-800" aria-hidden="true"></div>
+
+    <a
+      href={custodialItem.href}
+      aria-current={custodialItem.id === active ? 'page' : undefined}
+      class:list={[
+        'flex items-center justify-between rounded-md px-3 py-2 text-sm transition',
+        custodialItem.id === active
+          ? 'bg-titan-800 font-medium text-white'
+          : 'text-slate-400 hover:bg-titan-800/50 hover:text-slate-200',
+      ]}
+      data-nav={custodialItem.id}
+    >
+      <span>{custodialItem.label}</span>
+      {custodialItem.planned && (
+        <span class="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-300">
+          Planned
+        </span>
+      )}
+    </a>
 
     <div class="my-1.5 border-t border-titan-800" aria-hidden="true"></div>
 

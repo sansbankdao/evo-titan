@@ -1,0 +1,304 @@
+---
+// apps/desktop/src/pages/custodial.astro — Evo Titan
+//
+// CUSTODIAL POOL. ALL DATA IS MOCK — see src/lib/mock.ts.
+//
+// This is Rank 0: the opposite ownership arrangement to everything else in the
+// app. A depositor does NOT hold collateral, does NOT hold node keys, and does
+// NOT hold the voting key. The screen states that rather than implying it,
+// because custody is the one thing a user must not misunderstand.
+//
+// The layer is PLANNED and NOT OPEN. No deposit is accepted anywhere in this
+// UI, and no address is published. Every action is disabled with a reason.
+//
+// Protocol facts used below, verified from Dash Core v24.0.0-rc.1:
+//   - 2-8 shares           src/evo/providertx.h:134-135
+//   - >=100 DASH per share src/evo/providertx.h:58
+//   - shares sum to exactly the collateral (providertx.cpp:118)
+//   - shared collateral is Regular-node ONLY (providertx.cpp:280 rejects an
+//     Evo node with `bad-protx-shares-evo`)
+import Layout from '../layouts/Layout.astro';
+import { custodialPool, poolProgress, protocol, dash } from '../lib/mock';
+
+// Depositor rows, augmented with their share of the pool for the split bar.
+// Computed from the amounts rather than hardcoded, so an uneven deposit is
+// visible at a glance.
+const rows = custodialPool.depositors.map((d) => ({
+  ...d,
+  pct: (d.amount / poolProgress.target) * 100,
+}));
+
+// The unfilled remainder, drawn as the trailing segment of the same bar, so
+// the gap reads as space to fill rather than as an error.
+const gapPct = 100 - poolProgress.pct;
+
+// A distinct colour per depositor so the split bar is readable. Cycled, not
+// enumerated: the pool may hold up to `protocol.maxShares` depositors.
+const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500'];
+---
+
+<Layout title="Custodial pool" active="custodial">
+  <div class="mx-auto w-full max-w-6xl px-6 py-6">
+    <!--
+      PLANNED banner.
+
+      Sits above the fold and is NOT dismissible. The mock-data banner in
+      Layout.astro already says the data is invented; this says something
+      different and more specific — that the FEATURE does not exist. Those are
+      separate claims and both need to be on screen.
+    -->
+    <div
+      class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3"
+      data-custodial-state="planned"
+      role="status"
+    >
+      <div class="flex items-start gap-3">
+        <span
+          class="mt-0.5 shrink-0 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-300 uppercase"
+        >
+          Planned
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-amber-200">
+            The custodial layer is not open.
+          </p>
+          <p class="mt-1 text-xs leading-relaxed text-amber-200/80">
+            No deposits are accepted, no address is published, and nothing on this screen
+            represents funds you have sent us. The figures below are MOCK, and exist so the
+            arrangement can be reviewed before it goes live.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="mt-5 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-semibold tracking-tight text-white">{custodialPool.name}</h1>
+          <span
+            class="rounded border border-titan-500/30 bg-titan-500/10 px-1.5 py-0.5 text-[10px] font-medium text-titan-300"
+            data-rank="0"
+          >
+            Rank 0 · Custodial
+          </span>
+        </div>
+        <p class="mt-1 max-w-2xl text-sm text-slate-400">{custodialPool.statusNote}</p>
+      </div>
+      <button
+        type="button"
+        disabled
+        class="cursor-not-allowed rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-500"
+        title="The layer is not open. No deposit can be accepted."
+        data-action="deposit"
+        data-available="false"
+      >
+        Add a deposit
+      </button>
+    </div>
+
+    <!-- Progress toward one collateral -->
+    <section
+      class="mt-5 rounded-lg border border-titan-800 bg-titan-900/60 p-4"
+      data-section="progress"
+    >
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-200">Progress to one masternode</h2>
+        <p class="font-mono text-xs text-slate-400">
+          {poolProgress.raised.toLocaleString()} / {poolProgress.target.toLocaleString()} DASH
+        </p>
+      </div>
+
+      <!--
+        The split bar. Filled segments are deposited amounts; the trailing
+        segment is the unfilled remainder, drawn in a muted tone so the gap
+        reads as room to fill rather than as a failure state.
+      -->
+      <div class="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-titan-950" role="img" aria-label="Pool funding progress">
+        {
+          rows.map((row, i) => (
+            <div
+              class:list={[swatches[i % swatches.length], row.you ? 'opacity-100' : 'opacity-60']}
+              style={`width: ${row.pct.toFixed(3)}%`}
+              data-depositor={row.owner}
+              title={`${row.owner}: ${row.amount.toLocaleString()} DASH`}
+            />
+          ))
+        }
+        <div class="bg-titan-800/40" style={`width: ${gapPct.toFixed(3)}%`} data-gap="true" />
+      </div>
+
+      <div class="mt-3 grid gap-3 sm:grid-cols-3">
+        <div>
+          <p class="text-[11px] tracking-wide text-slate-500 uppercase">Remaining</p>
+          <p class="mt-1 font-mono text-sm text-slate-200">{dash(poolProgress.remaining)}</p>
+        </div>
+        <div>
+          <p class="text-[11px] tracking-wide text-slate-500 uppercase">Depositors</p>
+          <p class="mt-1 font-mono text-sm text-slate-200">
+            {rows.length} / {poolProgress.maxDepositors}
+          </p>
+        </div>
+        <div>
+          <p class="text-[11px] tracking-wide text-slate-500 uppercase">To complete</p>
+          <p class="mt-1 font-mono text-sm text-slate-200">
+            {poolProgress.ticketsRemaining} × {poolProgress.ticketSize.toLocaleString()} DASH
+          </p>
+        </div>
+      </div>
+
+      <!--
+        The arithmetic, stated outright. 125 x 8 = 1,000 is a coincidence of
+        the numbers, not a protocol rule, and the caption says so — otherwise
+        a reader would reasonably assume 125 is mandated, which it is not.
+      -->
+      <p class="mt-3 border-t border-titan-800 pt-3 text-[11px] leading-relaxed text-slate-500">
+        {poolProgress.ticketSize.toLocaleString()} DASH × {poolProgress.maxDepositors} depositors =
+        {' '}{poolProgress.target.toLocaleString()} DASH, the collateral for one Regular masternode. The
+        {poolProgress.maxDepositors}-depositor ceiling is consensus (Dash Core v24); the figure of
+        {' '}{poolProgress.ticketSize.toLocaleString()} DASH per depositor is not — a pool may be filled
+        with uneven amounts, and every share must still be at least
+        {' '}{protocol.minShareAmount} DASH.
+      </p>
+    </section>
+
+    <div class="mt-4 grid gap-4 lg:grid-cols-5">
+      <!-- Depositors -->
+      <section
+        class="rounded-lg border border-titan-800 bg-titan-900/60 p-4 lg:col-span-3"
+        data-section="depositors"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-sm font-semibold text-slate-200">Depositors</h2>
+          <span class="text-[11px] text-slate-500">MOCK</span>
+        </div>
+
+        <ul class="mt-3 divide-y divide-titan-800" role="list">
+          {
+            rows.map((row, i) => (
+              <li class="flex items-center gap-3 py-2.5 text-xs" data-pool-depositor={row.owner}>
+                <span class:list={['h-2 w-2 shrink-0 rounded-full', swatches[i % swatches.length]]} aria-hidden="true" />
+                <span class="text-slate-300">{row.owner}</span>
+                {row.you && (
+                  <span class="rounded-full border border-titan-500/30 bg-titan-500/10 px-2 py-0.5 text-[10px] text-titan-300">
+                    You
+                  </span>
+                )}
+                <span class="ml-auto font-mono text-slate-400">{dash(row.amount)}</span>
+                <span class="w-20 text-right font-mono text-[10px] text-slate-600">{row.since}</span>
+              </li>
+            ))
+          }
+        </ul>
+
+        <p class="mt-3 border-t border-titan-800 pt-3 text-[11px] text-slate-500">
+          Every name above is invented. No deposit has been received from anyone.
+        </p>
+      </section>
+
+      <!-- Custody terms -->
+      <section
+        class="rounded-lg border border-titan-800 bg-titan-900/60 p-4 lg:col-span-2"
+        data-section="custody"
+      >
+        <h2 class="text-sm font-semibold text-slate-200">What custody means here</h2>
+        <ul class="mt-3 space-y-2.5 text-[11px] leading-relaxed text-slate-400" role="list">
+          <li class="flex gap-2">
+            <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500/60" aria-hidden="true"></span>
+            <span><span class="text-slate-300">We hold the collateral.</span> You hold a claim on it, not the coins.</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500/60" aria-hidden="true"></span>
+            <span><span class="text-slate-300">You do not hold the node keys or the voting key.</span> The node votes without you.</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500/60" aria-hidden="true"></span>
+            <span><span class="text-slate-300">Withdrawal depends on our liquidity.</span> Returning your deposit requires us to have it available.</span>
+          </li>
+        </ul>
+
+        <div class="mt-4 border-t border-titan-800 pt-3">
+          <p class="text-[11px] font-medium text-slate-400">Blocked on</p>
+          <ul class="mt-2 space-y-1.5" role="list">
+            {
+              custodialPool.blockedBy.map((item) => (
+                <li class="flex gap-2 text-[11px] leading-relaxed text-slate-500">
+                  <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-600" aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))
+            }
+          </ul>
+          <p class="mt-2 text-[10px] text-slate-600">
+            Stated as conditions, not dates. No launch date has been set.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <!--
+      Rank ladder context. A depositor should be able to see where Rank 0 sits
+      WITHOUT having to leave the screen. It is drawn as a doorway rather than a
+      rung: it appears below the ladder, not as step 1, because custody is the
+      opposite ownership arrangement to every numbered rank.
+    -->
+    <section
+      class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4"
+      data-section="rank-context"
+    >
+      <h2 class="text-sm font-semibold text-slate-200">Where Rank 0 sits</h2>
+      <p class="mt-1 text-[11px] text-slate-500">
+        Rank 0 is a doorway, not a step. It is a different arrangement, not a smaller one.
+      </p>
+
+      <ol class="mt-3 grid gap-2 sm:grid-cols-5" role="list">
+        {
+          [
+            { rank: 'I', name: 'Shareholder', need: `from ${protocol.minShareAmount} DASH`, here: false },
+            { rank: 'II', name: 'Operator', need: '1,000 DASH', here: false },
+            { rank: 'III', name: 'Fleet Operator', need: 'n × 1,000 DASH', here: false },
+            { rank: 'IV', name: 'Evo Operator', need: '4,000 DASH', here: false },
+            { rank: 'V', name: 'Evo Titan', need: 'n × 4,000 DASH', here: false },
+          ].map((rung) => (
+            <li class="rounded-md border border-titan-800 bg-titan-950/40 px-3 py-2">
+              <p class="font-mono text-[10px] text-titan-400">Rank {rung.rank}</p>
+              <p class="mt-0.5 text-xs text-slate-300">{rung.name}</p>
+              <p class="mt-0.5 text-[10px] text-slate-600">{rung.need}</p>
+            </li>
+          ))
+        }
+      </ol>
+
+      <div
+        class="mt-2 rounded-md border border-dashed border-titan-700 bg-titan-950/40 px-3 py-2"
+        data-rank-context="0"
+      >
+        <p class="font-mono text-[10px] text-titan-400">Rank 0 · Custodial</p>
+        <p class="mt-0.5 text-xs text-slate-300">We hold the collateral, you hold a claim</p>
+        <p class="mt-0.5 text-[10px] text-slate-600">A doorway, not a rung. Reaches Rank I, never Rank IV.</p>
+      </div>
+    </section>
+
+    <!--
+      The waitlist is the ONLY action that will ever exist here, and it is off.
+      The button carries a title explaining why rather than being silently
+      inert.
+    -->
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        disabled
+        class="cursor-not-allowed rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-500"
+        title="Not open. No endpoint accepts signups yet."
+        data-action="waitlist"
+        data-available="false"
+      >
+        Join the waitlist
+      </button>
+      <p class="text-[11px] text-slate-600">
+        No form is wired, and no address is published. A placeholder that accepted a signup would
+        be worse than a disabled button, because you would believe you had joined.
+      </p>
+    </div>
+  </div>
+</Layout>
