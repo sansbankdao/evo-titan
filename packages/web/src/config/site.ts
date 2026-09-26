@@ -115,16 +115,24 @@ export const custodial = {
   name: 'Custodial',
   label: 'Let us run it for you',
 
-  /** The entry threshold. Sourced from the user's decision, not the protocol. */
-  minimum: 1,
-  minimumLabel: 'from 1 DASH',
+  /**
+   * The entry threshold. Sourced from the user's decision, not the protocol.
+   *
+   * There is NO minimum: the custodial service accepts ANY amount. This is the
+   * explicit exception to the self-custody default. Because we form the
+   * on-chain shares ourselves, the protocol's 100 DASH per-share floor
+   * (`CCollateralShare::MIN_AMOUNT`, src/evo/providertx.h:58) is a rule we
+   * satisfy internally — it is not a floor a depositor has to meet.
+   */
+  minimum: 0,
+  minimumLabel: 'any amount',
 
   /**
    * MOCK. One sentence, plainly stating the custody relationship. This is the
    * claim most likely to be misread, so it is stated rather than implied: the
-   * operator does not hold the collateral.
+   * operator does not hold the collateral, and we form the shares.
    */
-  body: 'Below the first rank there is a simpler way in. Instead of raising the full collateral, you deposit an amount you choose and we operate a masternode on your behalf. The collateral is held by us, not by you — which is the whole point, and also the trade-off.',
+  body: 'Below the first rank there is a simpler way in. Instead of raising a minimum stake, you deposit any amount you choose and we operate a masternode on your behalf. We hold the collateral, and we form the masternode\'s on-chain shares from the pooled deposits — which is the whole point, and also the trade-off.',
 
   /**
    * The honest trade-off list. Rendered as-is. Custody means giving something
@@ -133,6 +141,7 @@ export const custodial = {
   tradeoffs: [
     'We hold the collateral. You hold a claim on it, not the coins.',
     'You do not hold the node keys or the voting key.',
+    'We form the on-chain shares from pooled deposits, so no share belongs to you individually.',
     'Withdrawal depends on us having the liquidity to return your deposit.',
   ],
 
@@ -149,6 +158,10 @@ export const custodial = {
    * MOCK. The waitlist is the ONLY reachable action. No deposit flow exists.
    * TODO(launch): replace with a real form once the arrangement above exists.
    */
+  /**
+   * The waitlist lives at OUR SERVICE LEVEL. It is not a protocol concept:
+   * no Dash RPC exposes a waitlist, so this is an off-chain list we keep.
+   */
   waitlist: {
     label: 'Join the waitlist',
     available: false,
@@ -161,7 +174,8 @@ export const custodial = {
   },
 
   /** Rendered under the block so the status is never implied by layout alone. */
-  notice: 'Planned. Not open yet — no deposits are accepted and no address is published.',
+  notice:
+    'Planned. Not open yet — no deposits are accepted and no address is published. The waitlist is a list we keep at our service level.',
 };
 
 export const journey = {
@@ -277,7 +291,7 @@ export const features = [
   {
     icon: 'shield',
     title: 'Keys that never leave your machine',
-    body: 'Signing happens in the desktop client. Collateral, voting keys and share owner keys stay on the hardware you control.',
+    body: 'Signing happens in the desktop client. Collateral, voting keys and share owner keys stay on the hardware you control — the default for every shared masternode. The separate custodial service is the one exception, and it is labelled as such.',
   },
   {
     icon: 'bell',

@@ -5,8 +5,23 @@
 //
 // This is Rank 0: the opposite ownership arrangement to everything else in the
 // app. A depositor does NOT hold collateral, does NOT hold node keys, and does
-// NOT hold the voting key. The screen states that rather than implying it,
-// because custody is the one thing a user must not misunderstand.
+// NOT hold the voting key. We hold the collateral and we FORM the on-chain
+// shares from the pooled deposits, so no share belongs to a depositor
+// individually. The screen states that rather than implying it, because custody
+// is the one thing a user must not misunderstand.
+//
+// "Custodial" names THIS SERVICE ONLY. The ordinary shared masternode is
+// self-custodial: every share owner holds their own key. That is why this
+// screen says "we form the shares" — that sentence would be false on the
+// /shared screen, and is the reason the two are separate products.
+//
+// Because we form the shares, the protocol's 100 DASH per-share floor
+// (`CCollateralShare::MIN_AMOUNT`, src/evo/providertx.h:58) is satisfied
+// internally: a depositor may deposit ANY amount. The floor is a rule we meet
+// when building a share, not a limit on the depositor.
+//
+// The waitlist lives at OUR SERVICE LEVEL. It is off-chain and ours — no Dash
+// RPC exposes a waitlist.
 //
 // The layer is PLANNED and NOT OPEN. No deposit is accepted anywhere in this
 // UI, and no address is published. Every action is disabled with a reason.
@@ -64,8 +79,10 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
           </p>
           <p class="mt-1 text-xs leading-relaxed text-amber-200/80">
             No deposits are accepted, no address is published, and nothing on this screen
-            represents funds you have sent us. The figures below are MOCK, and exist so the
-            arrangement can be reviewed before it goes live.
+            represents funds you have sent us. This is the custodial service, where we hold
+            the collateral and form the on-chain shares; the ordinary shared masternode is
+            self-custodial and is a different product. The figures below are MOCK, and exist
+            so the arrangement can be reviewed before it goes live.
           </p>
         </div>
       </div>
@@ -155,10 +172,12 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
       <p class="mt-3 border-t border-titan-800 pt-3 text-[11px] leading-relaxed text-slate-500">
         {poolProgress.ticketSize.toLocaleString()} DASH × {poolProgress.maxDepositors} depositors =
         {' '}{poolProgress.target.toLocaleString()} DASH, the collateral for one Regular masternode. The
-        {poolProgress.maxDepositors}-depositor ceiling is consensus (Dash Core v24); the figure of
-        {' '}{poolProgress.ticketSize.toLocaleString()} DASH per depositor is not — a pool may be filled
-        with uneven amounts, and every share must still be at least
-        {' '}{protocol.minShareAmount} DASH.
+        {poolProgress.maxDepositors}-share ceiling is consensus (Dash Core v24). We form the
+        {poolProgress.maxDepositors} shares ourselves, so a depositor's amount is NOT fixed at
+        {' '}{poolProgress.ticketSize.toLocaleString()} DASH — this service accepts ANY amount, and a pool may be
+        filled with uneven deposits. The on-chain shares we build must still each be at least
+        {' '}{protocol.minShareAmount} DASH, but that floor is ours to satisfy when forming a share,
+        not a limit on what you deposit.
       </p>
     </section>
 
@@ -206,6 +225,10 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
           <li class="flex gap-2">
             <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500/60" aria-hidden="true"></span>
             <span><span class="text-slate-300">We hold the collateral.</span> You hold a claim on it, not the coins.</span>
+          </li>
+          <li class="flex gap-2">
+            <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500/60" aria-hidden="true"></span>
+            <span><span class="text-slate-300">We form the on-chain shares.</span> Your deposit does not map to one share you own; we assemble the shares from the pooled funds.</span>
           </li>
           <li class="flex gap-2">
             <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500/60" aria-hidden="true"></span>
@@ -296,7 +319,8 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
         Join the waitlist
       </button>
       <p class="text-[11px] text-slate-600">
-        No form is wired, and no address is published. A placeholder that accepted a signup would
+        No form is wired, and no address is published. This waitlist is a list WE keep at our
+        service level — it is not a protocol feature. A placeholder that accepted a signup would
         be worse than a disabled button, because you would believe you had joined.
       </p>
     </div>

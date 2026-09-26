@@ -448,8 +448,9 @@ export const appPrefs: Preference[] = [
 // amounts. But 125 x 8 landing exactly on the collateral is why the figure is
 // legible as a target, so the screen shows the arithmetic rather than hiding it.
 //
-// A pool registers ONE Regular masternode. Shared collateral can NEVER be an
-// Evo node: Dash Core rejects it with `bad-protx-shares-evo`
+// A pool registers ONE Regular masternode. The word is SHARE, not "slot": the
+// protocol term is `CCollateralShare` / `CollateralShares`. Shared collateral
+// can NEVER be an Evo node: Dash Core rejects it with `bad-protx-shares-evo`
 // (src/evo/providertx.cpp:280). The pool is a doorway to Rank I, not a path to
 // Rank IV.
 
@@ -457,7 +458,7 @@ export const appPrefs: Preference[] = [
 export interface PoolDepositor {
   /** MOCK. Display name. */
   owner: string;
-  /** MOCK. Deposited amount, in DASH. Not fixed — 125 is the target, not a rule. */
+  /** MOCK. Deposited amount, in DASH. The custodial service accepts any amount — 125 is the mock's target, not a rule. */
   amount: number;
   /** MOCK. ISO date the deposit was confirmed. */
   since: string;
@@ -501,7 +502,7 @@ export const custodialPool: Pool = {
   targetCollateral: protocol.regularCollateral,
   status: 'filling',
   statusNote:
-    'Planned and not open. The figures below show how a pool will be tracked once the arrangement exists — no deposit has been taken.',
+    'Planned and not open. The figures below show how a pool will be tracked once the arrangement exists — no deposit has been taken, and no minimum deposit applies: the service accepts any amount.',
   depositors: [
     { owner: 'You', amount: 125, since: '2026-09-02', you: true },
     { owner: 'harborlight', amount: 125, since: '2026-09-04' },
@@ -530,7 +531,7 @@ export const poolProgress = ((): {
   const raised = custodialPool.depositors.reduce((s, d) => s + d.amount, 0);
   const target = custodialPool.targetCollateral;
   // The suggested deposit size that would land the pool on the collateral in
-  // the fewest remaining slots. 125 is the mock's target, not a protocol value.
+  // the fewest remaining shares. 125 is the mock's target, not a protocol value.
   const ticketSize = 125;
   return {
     raised,
