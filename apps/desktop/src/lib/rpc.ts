@@ -118,13 +118,168 @@ export class DashRpc {
   /**
    * Shared masternode session handling.
    *
-   * TODO: verify against dashd — Dash Core v24 added shared collateral and a
-   * signature collector in the Qt client. Confirm whether these operations are
-   * exposed over RPC at all, or whether they are Qt-only and therefore must be
-   * reimplemented here against the transaction primitives.
+   * ANSWERED, from source: shared collateral is exposed over RPC, so this does
+   * NOT have to be reimplemented against transaction primitives. Dash Core
+   * v24.0.0-rc.1 src/rpc/evo.cpp registers these seven helpmen:
+   *
+   *   protx shared_register_prepare        (evo.cpp:2153)
+   *   protx shared_sign                    (evo.cpp:1227)
+   *   protx shared_combine                 (evo.cpp:1464)
+   *   protx shared_dissolve                (evo.cpp:1322)
+   *   protx shared_update_share            (evo.cpp:1366)
+   *   protx shared_update_registrar_prepare (evo.cpp:1413)
+   *
+   * The registration flow is: shared_register_prepare returns {tx, collateralIndex,
+   * consentHash}, every share owner calls shared_sign on the consent hash, then
+   * shared_combine assembles the signatures. This is a MULTI-PARTY flow, not a
+   * single call, because each share carries its own owner key.
+   *
+   * STILL UNVERIFIED: these names and signatures were read from source, but no
+   * call has been executed against a running dashd. Keep the TODO below until
+   * one has.
+   *
+   * TODO: verify against dashd — execute each `protx shared_*` against a real
+   * node and reconcile the returned JSON (above all the `terms` object and the
+   * base64 signature encoding) against these assumptions.
    */
   async sharedMasternodeInfo(proTxHash: string): Promise<unknown> {
     return this.call('protx', ['info', proTxHash]);
+  }
+
+  /**
+   * Prepare an unsigned shared masternode registration.
+   *
+   * Source: evo.cpp:2153. Takes the funding transaction plus a share table and
+   * returns the unsigned tx, the collateral output index and the consent hash.
+   * Amounts in the share table must sum to the required collateral, and each
+   * share is at least 100 DASH (CProRegTx::MIN_AMOUNT, providertx.h:58).
+   *
+   * TODO: verify against dashd — the share table is consensus-order
+   * significant, so preserve array order exactly. Confirm the operatorReward
+   * fixed-point encoding (basis points, 0..10000).
+   */
+  async sharedRegisterPrepare(
+    fundingTx: string,
+    shares: unknown[],
+    coreP2PAddrs: string,
+    operatorPubKey: string,
+    votingAddress: string,
+    operatorReward: number,
+    earlyPeriodBlocks: number,
+    earlyPenalty: number,
+  ): Promise<unknown> {
+    return this.call('protx', [
+      'shared_register_prepare',
+      fundingTx,
+      shares,
+      coreP2PAddrs,
+      operatorPubKey,
+      votingAddress,
+      operatorReward,
+      earlyPeriodBlocks,
+      earlyPenalty,
+    ]);
+  }
+
+  /**
+   * Sign a shared masternode transaction with every share owner key held.
+   *
+   * Source: evo.cpp:1227. The wallet signs whatever shares it holds and returns
+   * one signature per share, keyed by shareIndex. The transaction is not
+   * modified, so the result is handed straight to sharedCombine.
+   *
+   * This is the call that makes custody a matter of who holds the keys: in a
+   * custodial arrangement the operator holds them and signs on the depositor's
+   * behalf, which is exactly the power the custodial screen discloses.
+   *
+   * TODO: verify against dashd — confirm the wallet must be unlocked and that
+   * the returned entries are base64 (not hex).
+   */
+  async sharedSign(tx: string, allowTimeLocks = false): Promise<unknown> {
+    return this.call('protx', ['shared_sign', tx, allowTimeLocks]);
+  }
+
+  /**
+   * Combine collected share owner signatures into a shared masternode tx.
+   *
+   * Source: evo.cpp:1464. For a registration this yields the completed
+   * transaction hex, which then needs its funding inputs signed and broadcast.
+   *
+   * TODO: verify against dashd — confirm the expected shape of the signatures
+   * array ({shareIndex, signature}) and whether ordering matters.
+   */
+  async sharedCombine(
+    tx: string,
+    signatures: Array<{ shareIndex: number; signature: string }>,
+  ): Promise<unknown> {
+    return this.call('protx', ['shared_combine', tx, signatures]);
+  }
+
+  /**
+   * Build a unilateral dissolution, optionally as an offline standby.
+   *
+   * Source: evo.cpp:1322. With submit=false the signed hex is returned rather
+   * than broadcast. A standby dissolution is the depositor's escape hatch: it
+   * is valid forever once the early period ends, so it can be stored offline
+   * and broadcast without anyone's cooperation. The custodial screen promises
+   * withdrawal depends on our liquidity; a real standby would weaken that
+   * dependency, and whether we offer one is a product decision, not a fact.
+   *
+   * TODO: verify against dashd — confirm the fee ceiling (MAX_FEE 1000000
+   * duffs) and the payPenalty semantics against current height.
+   */
+  async sharedDissolve(
+    proTxHash: string,
+    actorIndex: number,
+    fee = 100000,
+    submit = true,
+    payPenalty?: boolean,
+  ): Promise<unknown> {
+    const params: unknown[] = ['shared_dissolve', proTxHash, actorIndex, fee, submit];
+    if (payPenalty !== undefined) params.push(payPenalty);
+    return this.call('protx', params);
+  }
+
+  /**
+   * Point a share's rewards at a new script.
+   *
+   * Source: evo.cpp:1366. Each share carries its own scriptReward, so reward
+   * routing is per-share. Passing the refund script resets rewards.
+   *
+   * TODO: verify against dashd — confirm whether this is signed by the share
+   * owner key alone or also needs the registrar's cooperation.
+   */
+  async sharedUpdateShare(
+    proTxHash: string,
+    shareIndex: number,
+    scriptReward: string,
+  ): Promise<unknown> {
+    return this.call('protx', ['shared_update_share', proTxHash, shareIndex, scriptReward]);
+  }
+
+  /**
+   * Prepare an update to a shared node's operator and voting keys.
+   *
+   * Source: evo.cpp:1413. Produces an unsigned ProUpSharedRegTx whose
+   * signatures must be collected from ALL shares, because a registrar update
+   * requires unanimity (providertx.h:514-516).
+   *
+   * TODO: verify against dashd — confirm unanimity is enforced and what happens
+   * when one share declines to sign.
+   */
+  async sharedUpdateRegistrarPrepare(
+    proTxHash: string,
+    operatorPubKey: string,
+    votingAddress: string,
+    feeSourceAddress: string,
+  ): Promise<unknown> {
+    return this.call('protx', [
+      'shared_update_registrar_prepare',
+      proTxHash,
+      operatorPubKey,
+      votingAddress,
+      feeSourceAddress,
+    ]);
   }
 }
 
