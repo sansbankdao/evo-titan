@@ -1,0 +1,115 @@
+---
+// apps/desktop/src/components/DemoModeToggle.astro — Evo Titan
+//
+// The ONE settings control in this build that is genuinely wired.
+//
+// Every other toggle on the Settings screen renders disabled with a "Not
+// wired" tag, because nothing is behind it. Demo Mode is different: it really
+// changes what renders, so pretending otherwise would be the same lie in
+// reverse.
+//
+// What it does, exactly:
+//
+//   on  — the "MOCK DATA" banner is visible and the mock screens render.
+//   off — the banner and the mock screens are BOTH hidden, and an empty state
+//         is shown in their place.
+//
+// The banner is deliberately tied to the data. Hiding the warning while
+// leaving fabricated figures on screen would recreate precisely the failure
+// the banner exists to prevent.
+//
+// The control is an <input type="checkbox"> driven by a script, NOT by
+// `disabled` state: it is the live one. The nested <span> label markup mirrors
+// Toggle.astro so the two sit together visually.
+const { id = 'demo-mode' } = Astro.props;
+---
+
+<div
+  class="flex items-start justify-between gap-4 border-b border-titan-800 py-3 last:border-b-0"
+  data-pref={id}
+  data-pref-available="true"
+>
+  <div class="min-w-0">
+    <label for={id} class="text-sm text-slate-200">Demo Mode</label>
+    <p class="mt-0.5 text-xs leading-relaxed text-slate-500">
+      Show the fabricated screens. Turning this off hides the mock banner
+      <em class="not-italic text-slate-400">and</em> the mock data together — the warning is
+      never removed while invented figures stay on screen.
+    </p>
+  </div>
+
+  <div class="flex shrink-0 items-center gap-2 pt-0.5">
+    <span
+      class="rounded border border-titan-700 px-1.5 py-0.5 text-xs font-medium text-titan-300"
+      data-demo-state-label
+    >
+      On
+    </span>
+    <input
+      type="checkbox"
+      id={id}
+      checked
+      class="h-4 w-4 cursor-pointer accent-titan-500"
+      data-demo-toggle
+    />
+  </div>
+</div>
+
+<script>
+  // The toggle and the pre-paint flag in Layout.astro must agree, and the
+  // source of truth is `localStorage` under the same key. Both read it, so a
+  // reload lands on the same state the toggle was left in.
+  const KEY = 'evotitan.demoMode';
+
+  const read = (): 'on' | 'off' => {
+    try {
+      return localStorage.getItem(KEY) === 'off' ? 'off' : 'on';
+    } catch {
+      return 'on';
+    }
+  };
+
+  const write = (value: 'on' | 'off') => {
+    try {
+      localStorage.setItem(KEY, value);
+    } catch {
+      // Storage is unavailable. The in-page state below still applies for this
+      // session; it simply will not survive a reload.
+    }
+  };
+
+  const apply = (value: 'on' | 'off') => {
+    document.documentElement.dataset.demoMode = value;
+
+    const toggle = document.querySelector<HTMLInputElement>('[data-demo-toggle]');
+    const label = document.querySelector<HTMLElement>('[data-demo-state-label]');
+    if (toggle) toggle.checked = value === 'on';
+    if (label) label.textContent = value === 'on' ? 'On' : 'Off';
+
+    // The About block's "Data source" row must not keep saying "Mock" after the
+    // mock data has been switched off — that would be the same contradiction
+    // the banner rule exists to prevent, just in a different place.
+    const source = document.querySelector<HTMLElement>('[data-setting="data-source"]');
+    if (source) source.textContent = value === 'on' ? 'Mock' : 'None';
+  };
+
+  const toggle = document.querySelector<HTMLInputElement>('[data-demo-toggle]');
+  const enable = document.querySelector<HTMLButtonElement>('[data-demo-enable]');
+
+  // Initialise the checkbox from storage, so it does not show "checked" while
+  // the document says otherwise.
+  apply(read());
+
+  toggle?.addEventListener('change', () => {
+    const value = toggle.checked ? 'on' : 'off';
+    write(value);
+    apply(value);
+  });
+
+  // The recovery button in the empty state. Without this, Demo Mode would be a
+  // one-way door: the Settings screen is itself hidden when Demo Mode is off.
+  enable?.addEventListener('click', () => {
+    write('on');
+    apply('on');
+  });
+</script>

@@ -2,19 +2,19 @@
 @import 'tailwindcss';
 
 /*
- * LEGIBILITY FLOOR: 13px.
+ * LEGIBILITY FLOOR: 14px.
  *
- * No text in this app may render below 13px. The shell is dense — a sidebar,
+ * No text in this app may render below 14px. The shell is dense — a sidebar,
  * a status bar and tables of hashes — and it is easy to reach for `text-xs`
  * to make a value fit. Do not. A desktop window is 1440x900 by default (see
  * tauri.conf.json) and at that size 9px and 10px are unreadable on a normal
  * display.
  *
- * Use `text-[13px]` as the floor for the smallest labels and captions that used
- * to be `text-xs`, `text-xs`, `text-xs` or `text-xs`. Tailwind's
- * `text-xs` (12px) is therefore also below the floor and must not be used for
- * legible content. The only exemption is decorative glyph furniture that is
- * already aria-hidden, and even then prefer a real size.
+ * `text-xs` IS the floor here, because the token is raised to 14px below. Do
+ * not reintroduce `text-[9px]` / `text-[10px]` / `text-[11px]` / `text-[12px]` /
+ * `text-[13px]`: those are all below the floor and were removed once already.
+ * The only exemption is decorative glyph furniture that is already aria-hidden,
+ * and even then prefer a real size.
  */
 
 /*
@@ -32,13 +32,17 @@
   --color-titan-300: oklch(0.78 0.12 274);
 
   /*
-   * LEGIBILITY FLOOR: 13px. See the note at the top of this file. Tailwind's
+   * LEGIBILITY FLOOR: 14px. See the note at the top of this file. Tailwind's
    * default `text-xs` is 12px, which is unreadable in a dense desktop shell at
    * the default 1440x900 window size. The mechanical pass that removed the
    * `text-[9px]` / `text-[10px]` / `text-[11px]` tokens left everything on
    * `text-xs`, so raising the token here is what actually lifts the floor.
+   *
+   * 14px is deliberately the SAME size as Tailwind's `text-sm`, so the two
+   * classes now agree instead of sitting 1px apart. The line-height matches
+   * Tailwind's `text-sm` for the same reason.
    */
-  --text-xs: 0.8125rem; /* 13px */
+  --text-xs: 0.875rem; /* 14px */
   --text-xs--line-height: 1.25rem;
 }
 
@@ -79,4 +83,36 @@ body {
 .selectable {
   user-select: text;
   cursor: text;
+}
+
+/*
+ * DEMO MODE.
+ *
+ * `html[data-demo-mode]` is set before first paint by an inline script in
+ * Layout.astro, so there is no flash of the wrong state. Two things are keyed
+ * off it:
+ *
+ *   on  — the mock banner is visible and the mock screens render.
+ *   off — the banner AND the mock content are both hidden, and the empty state
+ *         is shown instead.
+ *
+ * The banner is hidden in step with the data on purpose. Hiding the warning
+ * while leaving fabricated figures on screen would be the exact failure the
+ * banner exists to prevent: a screenshot of invented data that no longer says
+ * it is invented. If the data goes, the notice goes with it.
+ */
+[data-demo-mode='off'] [data-notice='mock-data'] {
+  display: none;
+}
+
+[data-demo-mode='off'] [data-demo-content] {
+  display: none;
+}
+
+[data-when-demo='off'] {
+  display: none;
+}
+
+[data-demo-mode='off'] [data-when-demo='off'] {
+  display: flex;
 }

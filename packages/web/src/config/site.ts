@@ -564,15 +564,66 @@ export const fees = {
   custodialPercent: 30,
 
   /**
-   * MOCK survey. These are competitor figures obtained in an earlier session
-   * from Wayback captures whose exact snapshot URLs are NOT yet re-pinned, so
-   * they are NOT publishable and must not be quoted on a live page. Kept here
-   * only to document the range we examined.
+   * VERIFIED competitor survey, with pinned Wayback snapshots.
+   *
+   * Source: CrowdNode's public knowledge-base article "How much does CrowdNode
+   * cost?" (knowledge.crowdnode.io/en/articles/2225953). Snapshots read:
+   *
+   *   2024-05-19  https://web.archive.org/web/20240519054519/https://knowledge.crowdnode.io/en/articles/2225953-how-much-does-crowdnode-cost
+   *     "It is simple. We take 15% of the rewards being generated."
+   *     "Of the rewards being rewarded to the Masternodes we take a 15%
+   *      commission."
+   *
+   *   2025-06-20  https://web.archive.org/web/20250620013136/https://knowledge.crowdnode.io/en/articles/2225953-how-much-does-crowdnode-cost
+   *     "We take 35% of the rewards being generated from custodial assets under
+   *      management, 20% from non-custodial masternodes."
+   *     "35% fees from custodial funds / 20% fees from non-custodial masternode
+   *      shares."
+   *
+   * WHAT THE NUMBERS MEAN, because the distinction is the whole point and is
+   * easy to flatten:
+   *
+   *   - They are charged on the REWARD the masternode generates, not on the
+   *     deposit. It is a cut of the yield, which is why it is comparable to our
+   *     own custodial fee and directly comparable to `nOperatorReward`.
+   *   - CUSTODIAL (35% in the later captures, 15% in the earlier ones) is where
+   *     the provider holds the funds. That is the same risk arrangement as our
+   *     own custodial service, so it is the figure our 30% should be read
+   *     against.
+   *   - NON-CUSTODIAL / trustless (20%) is where the depositor keeps the keys and
+   *     the provider only operates. That is the same arrangement as our
+   *     SELF-CUSTODIAL shared masternode, so it is the figure our recommended
+   *     10-20% shared-pool band should be read against.
+   *   - The rise from 15% to 35% on the custodial side between the 2024 and 2025
+   *     captures is a live price change by a competitor, not a typo in either
+   *     capture. Both are quoted so the move is visible rather than averaged
+   *     away.
+   *
+   * These are now quotable: both snapshots above were read directly (HTTP 200)
+   * and the wording above is verbatim from them.
    */
   competitorSurvey: [
-    { name: 'custodial, 2023-2024 captures', percentOfRewards: 15, publishable: false },
-    { name: 'custodial, 2025-2026 captures', percentOfRewards: 35, publishable: false },
-    { name: 'trustless/shared, 2025-2026 captures', percentOfRewards: 20, publishable: false },
+    {
+      name: 'CrowdNode — custodial, 2024-05-19 capture',
+      percentOfRewards: 15,
+      publishable: true,
+      basis: 'custodial (provider holds funds)',
+      snapshot: 'https://web.archive.org/web/20240519054519/https://knowledge.crowdnode.io/en/articles/2225953-how-much-does-crowdnode-cost',
+    },
+    {
+      name: 'CrowdNode — custodial, 2025-06-20 capture',
+      percentOfRewards: 35,
+      publishable: true,
+      basis: 'custodial (provider holds funds)',
+      snapshot: 'https://web.archive.org/web/20250620013136/https://knowledge.crowdnode.io/en/articles/2225953-how-much-does-crowdnode-cost',
+    },
+    {
+      name: 'CrowdNode — non-custodial shares, 2025-06-20 capture',
+      percentOfRewards: 20,
+      publishable: true,
+      basis: 'non-custodial (depositor holds keys)',
+      snapshot: 'https://web.archive.org/web/20250620013136/https://knowledge.crowdnode.io/en/articles/2225953-how-much-does-crowdnode-cost',
+    },
   ],
 
   /**
@@ -588,7 +639,7 @@ export const fees = {
     highPercent: 20,
     recommendedPercent: 15,
     rationale:
-      'Coordination only: we assemble the participant set, run shared_register_prepare and shared_combine, and keep the node updated. We take no custody risk and post no collateral, so the rate sits below the custodial one.',
+      'Coordination only: we assemble the participant set, run shared_register_prepare and shared_combine, and keep the node updated. We take no custody risk and post no collateral, so the rate sits below the custodial one. The band is anchored on the sourced non-custodial comparison — CrowdNode charges 20% of rewards for non-custodial shares (2025-06-20 capture of knowledge.crowdnode.io/en/articles/2225953) — so 10-20% keeps us at or under the incumbent for the same trustless arrangement, while our 30% custodial rate sits under their 35% custodial rate.',
   },
 };
 

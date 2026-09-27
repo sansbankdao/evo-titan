@@ -25,7 +25,12 @@ const appVersion = '26.9.26';
     <span>RPC not implemented</span>
   </div>
 
-  <div class="flex items-center gap-4">
+  <!--
+    These are counts of MOCK nodes, so they are tagged `data-demo-content` and
+    disappear with Demo Mode. The "No node connected" text on the left is the
+    truth and stays: it is the ONLY thing in this bar that is not fabricated.
+  -->
+  <div class="flex items-center gap-4" data-demo-content>
     <span>{summary.totalNodes} nodes</span>
     <span class="text-slate-700">·</span>
     <span>{summary.enabled} enabled</span>

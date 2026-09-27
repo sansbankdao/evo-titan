@@ -12,7 +12,7 @@ const { active = 'fleet', needsAttention } = Astro.props;
 
 const items = [
   { id: 'fleet', label: 'Fleet', href: '/' },
-  { id: 'shared', label: 'Shared nodes', href: '/shared' },
+  { id: 'shared', label: 'Shared Masternodes', href: '/shared' },
   { id: 'signing', label: 'Signing', href: '/signing' },
   { id: 'rewards', label: 'Rewards', href: '/rewards' },
   { id: 'activity', label: 'Activity', href: '/activity' },
@@ -30,7 +30,7 @@ const accountItems = [
 // not a sixth entry in the fleet list: custody is the opposite ownership
 // arrangement to every node view above it, and filing it alongside them would
 // imply the operator holds collateral they do not hold.
-const custodialItem = { id: 'custodial', label: 'Custodial pool', href: '/custodial', planned: true };
+const custodialItem = { id: 'custodial', label: 'Custodial Pool', href: '/custodial', planned: true };
 ---
 
 <aside class="flex w-56 shrink-0 flex-col border-r border-titan-800 bg-titan-900">
@@ -60,6 +60,7 @@ const custodialItem = { id: 'custodial', label: 'Custodial pool', href: '/custod
               <span
                 class="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-xs font-semibold text-amber-300"
                 title={`${needsAttention} node(s) need attention`}
+                data-demo-content
               >
                 {needsAttention}
               </span>

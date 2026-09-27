@@ -146,12 +146,13 @@ Verify UI by:
 
 ## Legibility floor
 
-**No text renders below 13px**, on any surface.
+**No text renders below 14px**, on any surface.
 
-- Tailwind's default `text-xs` is **12px**, which is under the floor. The floor is applied by overriding the token in the theme — `--text-xs: 0.8125rem;` (13px) — at the top of `apps/desktop/src/styles/global.css` and `packages/web/src/styles/global.css`. Overriding the token is what lifts every existing `text-xs` at once.
-- The mechanical pass removed `text-[9px]`, `text-[10px]` and `text-[11px]`. Do not reintroduce them. If a layout needs smaller text, the layout is wrong.
+- Tailwind's default `text-xs` is **12px**, which is under the floor. The floor is applied by overriding the token in the theme — `--text-xs: 0.875rem;` (14px) — at the top of `apps/desktop/src/styles/global.css` and `packages/web/src/styles/global.css`. Overriding the token is what lifts every existing `text-xs` at once.
+- **14px is deliberately the same size as Tailwind's `text-sm`**, so the two classes now agree instead of sitting 1px apart. The line-height matches `text-sm` as well.
+- Do not reintroduce `text-[9px]`, `text-[10px]`, `text-[11px]`, `text-[12px]` or `text-[13px]`. All are below the floor.
 - **Do not invent CSS.** `min-font-size` is not a real property; a fix that relies on it does nothing. Verify with computed style in a browser, not by reading the class list.
-- Verify by measuring: `getComputedStyle(el).fontSize` over every text-bearing element must have a minimum of `13px`.
+- Verify by measuring: `getComputedStyle(el).fontSize` over every text-bearing element must have a minimum of `14px`.
 
 ## The earnings model
 
@@ -179,6 +180,24 @@ Derived: block value `3.714286` — MN gross `2.785714` — Platform `1.044643` 
 - **Earnings figures use 4 decimals** (`dash4`), never the 8-decimal `dash()`. Eight decimals claims precision the model does not have.
 - Fees: the **custodial service fee is 30%** (a product price the user set), applied to the **gross** node reward. The **shared-pool operator fee** is a **recommendation of 10–20%, 15% suggested** — lower, because we take no custody risk and post no collateral. Neither figure is consensus.
 - On a shared node the operator cut comes off the **whole node** before the split, and the remainder is split **by collateral** (`SplitAmountByShares`). A 125 DASH deposit is 12.5% of a 1,000 DASH node's reward — not 12.5% of the post-fee remainder.
+- **Competitor fees are now sourced and publishable.** CrowdNode's own knowledge-base article `knowledge.crowdnode.io/en/articles/2225953` ("How much does CrowdNode cost?"), read via pinned Wayback snapshots: `20240519054519` says *"We take 15% of the rewards being generated"*; `20250620013136` says *"We take 35% of the rewards being generated from custodial assets under management, 20% from non-custodial masternodes"*. The percentages are a cut of the **reward**, not the deposit. **Custodial (35%) is compared only to our custodial 30%; non-custodial (20%) only to our self-custodial shared-pool band (10–20%).** Never quote one against the other arrangement.
+
+## Colour and size contrast on featured values
+
+The earnings figures are the reason the visitor is on the page, so the hierarchy is carried by **colour and type size**, not by position alone.
+
+- On the block-reward row the context figures sit at `slate`/`rose` and the payout figures at `indigo`/`white`; the **net** figure — what actually reaches an operator — is the largest on the row (`text-4xl` web, `text-3xl` desktop) with a 2px indigo border and a tinted background.
+- "You keep" is always the biggest number in any fee breakdown. The fee is tinted rose, the gross is neutral, and the net is the headline.
+- Do not flatten this back to one size and one colour. A row of identically-styled numbers makes the reader do the prioritisation the design was supposed to do.
+
+## Demo Mode
+
+`Settings → Demo Mode` (`apps/desktop/src/components/DemoModeToggle.astro`) toggles the mock data on and off across every screen. It is the **only fully wired control in the build** — every other toggle renders disabled with a "Not wired" tag.
+
+- State lives in `localStorage` under `evotitan.demoMode`, defaulting to **on**. It is applied in an **inline script in `<head>`** (`Layout.astro`) so the document never paints the wrong state.
+- The banner is hidden **in step with the data**, via `[data-demo-mode='off'] [data-notice='mock-data']` and `[data-demo-mode='off'] [data-demo-content]` in `global.css`. Hiding the warning while leaving fabricated figures on screen recreates the exact failure the banner exists to prevent.
+- The empty state (`[data-when-demo='off']`) is a **sibling of `<main>`**, not inside it, and carries a **re-enable button**. Settings is itself hidden when Demo Mode is off, so without that button the toggle would be a one-way door.
+- `Settings → About → Data source` must read `Mock` when on and `None` when off. Do not leave it saying "Mock" over blank screens.
 
 ## Mock data
 

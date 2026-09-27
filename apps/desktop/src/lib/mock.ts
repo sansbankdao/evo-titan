@@ -546,7 +546,7 @@ export const appPrefs: Preference[] = [
 // (src/evo/providertx.cpp:280). The pool is a doorway to Rank I, not a path to
 // Rank IV.
 
-/** MOCK. One depositor in the custodial pool. */
+/** MOCK. One depositor in the Custodial Pool. */
 export interface PoolDepositor {
   /** MOCK. Display name. */
   owner: string;
@@ -558,7 +558,7 @@ export interface PoolDepositor {
   you?: boolean;
 }
 
-/** MOCK. A custodial pool being assembled toward one masternode. */
+/** MOCK. A Custodial Pool being assembled toward one masternode. */
 export interface Pool {
   /** MOCK. Internal id. */
   id: string;

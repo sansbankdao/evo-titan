@@ -22,6 +22,32 @@ const { title, active } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} — Evo Titan</title>
+    <!--
+      DEMO MODE, set before first paint.
+
+      This runs inline and synchronously in <head> so the document carries the
+      right `data-demo-mode` before anything renders. A deferred script would
+      let the mock banner paint and then vanish, which is worse than not having
+      the toggle at all.
+
+      Default is ON: this build's entire purpose is the mock-data UI/UX
+      session, so the fabricated screens are what a first run should show.
+      `localStorage` can throw (private mode, blocked storage), hence the
+      try/catch — on failure we fall back to ON rather than rendering a blank
+      shell.
+    -->
+    <script is:inline>
+      (() => {
+        const KEY = 'evotitan.demoMode';
+        let value = 'on';
+        try {
+          if (localStorage.getItem(KEY) === 'off') value = 'off';
+        } catch {
+          /* storage unavailable — stay on */
+        }
+        document.documentElement.dataset.demoMode = value;
+      })();
+    </script>
   </head>
   <body class="flex h-full flex-col overflow-hidden bg-titan-950 text-slate-100 select-none">
     <!--
@@ -41,9 +67,48 @@ const { title, active } = Astro.props;
       <Sidebar active={active} needsAttention={summary.needsAttention} />
 
       <div class="flex min-w-0 flex-1 flex-col">
-        <main class="min-h-0 flex-1 overflow-y-auto">
+        <!--
+          `data-demo-content` is hidden when Demo Mode is off (see global.css).
+          Every screen below the banner is fabricated, so switching Demo Mode
+          off must take the fabrication with it — a blank pane would be
+          confusing, an uncleared pane of invented numbers would be dangerous.
+        -->
+        <main class="min-h-0 flex-1 overflow-y-auto" data-demo-content>
           <slot />
         </main>
+
+        <!--
+          The state shown INSTEAD of the mock screens when Demo Mode is off.
+
+          This sits as a sibling of `<main>`, not inside it, because `<main>`
+          is hidden in this state and a recovery control inside a hidden
+          container cannot be clicked. It carries its own re-enable button so
+          Demo Mode can never become a one-way door.
+        -->
+        <div
+          class="min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 text-center"
+          data-when-demo="off"
+        >
+          <div class="max-w-md">
+            <p class="text-sm font-semibold tracking-tight text-slate-200">
+              Demo Mode is off
+            </p>
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">
+              Every screen in this build is mock data — no node is connected and
+              no RPC transport exists yet. With Demo Mode off there is nothing
+              to show, so the fabricated figures are hidden rather than left on
+              screen without their warning.
+            </p>
+            <button
+              type="button"
+              data-demo-enable
+              class="mt-4 cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20"
+            >
+              Turn Demo Mode on
+            </button>
+          </div>
+        </div>
+
         <StatusBar />
       </div>
     </div>

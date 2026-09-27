@@ -65,39 +65,45 @@ const money = (n: number, digits = 2): string =>
       </p>
     </div>
 
-    <!-- The block reward, decomposed -->
+    <!-- The block reward, decomposed.
+
+         Colour and size carry the hierarchy, so the important number is not
+         simply the last one read. Block value and the Platform cut are context
+         and sit at slate/rose; the two masternode figures sit at indigo/white,
+         and the NET figure — the number that actually reaches an operator — is
+         the largest type on the row. -->
     <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-5" data-block-figure="value">
         <p class="text-xs tracking-wide text-slate-500 uppercase">Block value</p>
-        <p class="mt-2 font-mono text-2xl text-white">{money(perBlock.blockValue, 6)}</p>
+        <p class="mt-2 font-mono text-2xl text-slate-400">{money(perBlock.blockValue, 6)}</p>
         <p class="mt-1 text-xs text-slate-500">
           DASH per block, after the 20% treasury and the interval decline
         </p>
       </div>
 
       <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-5" data-block-figure="gross">
-        <p class="text-xs tracking-wide text-slate-500 uppercase">Masternode reward, gross</p>
-        <p class="mt-2 font-mono text-2xl text-indigo-300">{money(perBlock.masternodeRewardGross, 6)}</p>
+        <p class="text-xs tracking-wide text-indigo-400/80 uppercase">Masternode reward, gross</p>
+        <p class="mt-2 font-mono text-3xl text-indigo-300">{money(perBlock.masternodeRewardGross, 6)}</p>
         <p class="mt-1 text-xs text-slate-500">
           {yieldModel.masternodeShareOfBlockValue * 100}% of block value — {money(perBlock.masternodeRewardGross * yieldModel.blocksPerYear)} DASH/yr
         </p>
       </div>
 
       <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-5" data-block-figure="platform">
-        <p class="text-xs tracking-wide text-slate-500 uppercase">Less: Platform credit pool</p>
-        <p class="mt-2 font-mono text-2xl text-rose-300">−{money(perBlock.platformCreditPool, 6)}</p>
+        <p class="text-xs tracking-wide text-rose-400/80 uppercase">Less: Platform credit pool</p>
+        <p class="mt-2 font-mono text-3xl text-rose-300">−{money(perBlock.platformCreditPool, 6)}</p>
         <p class="mt-1 text-xs text-slate-500">
           {yieldModel.platformShareOfMasternodeReward * 100}% of the masternode share
         </p>
       </div>
 
       <div
-        class="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-5"
+        class="rounded-xl border-2 border-indigo-500/40 bg-indigo-500/10 p-5"
         data-block-figure="net"
       >
-        <p class="text-xs tracking-wide text-indigo-300 uppercase">Masternode reward, net</p>
-        <p class="mt-2 font-mono text-2xl text-white">{money(perBlock.masternodeRewardNet, 6)}</p>
-        <p class="mt-1 text-xs text-slate-500">
+        <p class="text-xs font-semibold tracking-wide text-indigo-200 uppercase">Masternode reward, net</p>
+        <p class="mt-2 font-mono text-4xl font-semibold text-white">{money(perBlock.masternodeRewardNet, 6)}</p>
+        <p class="mt-1 text-xs text-indigo-200/70">
           DASH per block — {money(yieldModel.annualMasternodePot, 0)} DASH/yr across every node
         </p>
       </div>
@@ -115,8 +121,8 @@ const money = (n: number, digits = 2): string =>
             <tr class="text-xs tracking-wide text-slate-400 uppercase">
               <th scope="col" class="px-4 py-3 font-medium">Registered nodes</th>
               <th scope="col" class="px-4 py-3 font-medium">Reward / node / yr</th>
-              <th scope="col" class="px-4 py-3 font-medium">Regular · 1,000 DASH</th>
-              <th scope="col" class="px-4 py-3 font-medium">Evo · 4,000 DASH</th>
+              <th scope="col" class="px-4 py-3 text-right font-medium text-indigo-300">Regular · 1,000 DASH</th>
+              <th scope="col" class="px-4 py-3 text-right font-medium text-slate-400">Evo · 4,000 DASH</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800/60">
@@ -126,7 +132,7 @@ const money = (n: number, digits = 2): string =>
                 const isBase = row.nodes === base.nodes;
                 return (
                   <tr
-                    class={isBase ? 'bg-indigo-500/5' : ''}
+                    class={isBase ? 'bg-indigo-500/10' : ''}
                     data-apy-row={String(row.nodes)}
                   >
                     <td class="px-4 py-3 font-mono text-sm text-slate-300">
@@ -137,11 +143,30 @@ const money = (n: number, digits = 2): string =>
                         </span>
                       )}
                     </td>
-                    <td class="px-4 py-3 font-mono text-sm text-slate-300">{money(perNode, 2)} DASH</td>
-                    <td class="px-4 py-3 font-mono text-sm text-white" data-apy="regular">
+                    <td
+                      class:list={[
+                        'px-4 py-3 font-mono',
+                        isBase ? 'text-base text-slate-200' : 'text-sm text-slate-400',
+                      ]}
+                    >
+                      {money(perNode, 2)} DASH
+                    </td>
+                    <td
+                      class:list={[
+                        'px-4 py-3 text-right font-mono font-semibold',
+                        isBase ? 'text-2xl text-indigo-200' : 'text-base text-indigo-300/80',
+                      ]}
+                      data-apy="regular"
+                    >
                       {money(row.regularApy)}%
                     </td>
-                    <td class="px-4 py-3 font-mono text-sm text-slate-300" data-apy="evo">
+                    <td
+                      class:list={[
+                        'px-4 py-3 text-right font-mono',
+                        isBase ? 'text-lg text-slate-400' : 'text-sm text-slate-500',
+                      ]}
+                      data-apy="evo"
+                    >
                       {money(row.evoApy)}%
                     </td>
                   </tr>
@@ -174,15 +199,15 @@ const money = (n: number, digits = 2): string =>
         <dl class="mt-5 space-y-3 border-t border-slate-800 pt-4 text-sm">
           <div class="flex items-baseline justify-between gap-4">
             <dt class="text-slate-400">Reward / node / yr</dt>
-            <dd class="font-mono text-slate-200"><span data-apy-pernode>—</span> DASH</dd>
+            <dd class="font-mono text-base text-slate-300"><span data-apy-pernode>—</span> DASH</dd>
           </div>
-          <div class="flex items-baseline justify-between gap-4">
-            <dt class="text-slate-400">Regular APY</dt>
-            <dd class="font-mono text-lg text-white"><span data-apy-out-regular>—</span>%</dd>
+          <div class="flex items-baseline justify-between gap-4 rounded-lg border border-indigo-500/20 bg-indigo-500/5 px-3 py-2">
+            <dt class="text-indigo-200">Regular APY</dt>
+            <dd class="font-mono text-3xl font-semibold text-indigo-200"><span data-apy-out-regular>—</span>%</dd>
           </div>
-          <div class="flex items-baseline justify-between gap-4">
-            <dt class="text-slate-400">Evo APY</dt>
-            <dd class="font-mono text-lg text-slate-300"><span data-apy-out-evo>—</span>%</dd>
+          <div class="flex items-baseline justify-between gap-4 px-3">
+            <dt class="text-slate-500">Evo APY</dt>
+            <dd class="font-mono text-lg text-slate-500"><span data-apy-out-evo>—</span>%</dd>
           </div>
         </dl>
 
@@ -212,20 +237,20 @@ const money = (n: number, digits = 2): string =>
       <div class="mt-5 grid gap-4 sm:grid-cols-3">
         <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
           <p class="text-xs tracking-wide text-slate-500 uppercase">Gross on 125 DASH</p>
-          <p class="mt-2 font-mono text-xl text-slate-200">{money(grossSharePerYear, 4)}</p>
+          <p class="mt-2 font-mono text-2xl text-slate-300">{money(grossSharePerYear, 4)}</p>
           <p class="mt-1 text-xs text-slate-500">DASH / year, before our fee</p>
         </div>
-        <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-          <p class="text-xs tracking-wide text-slate-500 uppercase">Less {fees.custodialPercent}% fee</p>
-          <p class="mt-2 font-mono text-xl text-rose-300">
+        <div class="rounded-lg border border-rose-500/20 bg-rose-500/5 p-4">
+          <p class="text-xs tracking-wide text-rose-300/80 uppercase">Less {fees.custodialPercent}% fee</p>
+          <p class="mt-2 font-mono text-2xl text-rose-300">
             −{money(grossSharePerYear - custodialKeeps, 4)}
           </p>
-          <p class="mt-1 text-xs text-slate-500">DASH / year to us</p>
+          <p class="mt-1 text-xs text-rose-300/50">DASH / year to us</p>
         </div>
-        <div class="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-4">
-          <p class="text-xs tracking-wide text-indigo-300 uppercase">You keep</p>
-          <p class="mt-2 font-mono text-xl text-white">{money(custodialKeeps, 4)}</p>
-          <p class="mt-1 text-xs text-slate-500">
+        <div class="rounded-lg border-2 border-indigo-500/40 bg-indigo-500/10 p-4">
+          <p class="text-xs font-semibold tracking-wide text-indigo-200 uppercase">You keep</p>
+          <p class="mt-2 font-mono text-4xl font-semibold text-white">{money(custodialKeeps, 4)}</p>
+          <p class="mt-1 text-xs text-indigo-200/70">
             DASH / year → {money((custodialKeeps / 125) * 100)}% on 125 DASH
           </p>
         </div>
@@ -235,6 +260,56 @@ const money = (n: number, digits = 2): string =>
         {custodial.notice} The {fees.custodialPercent}% and the figures above are a worked example at an
         assumed node count, not an offer.
       </p>
+
+      <!--
+        The sourced comparison.
+
+        Every number here is quoted from a pinned Wayback snapshot of CrowdNode's
+        own knowledge base, and the two rows are not interchangeable: custodial
+        fees are charged where the provider holds the funds, non-custodial where
+        the depositor keeps the keys. Our 30% is compared only to the custodial
+        figure, and our shared-pool band only to the non-custodial one.
+      -->
+      <div class="mt-5 border-t border-slate-800 pt-4" data-competitor-comparison>
+        <h4 class="text-xs font-semibold tracking-wide text-slate-400 uppercase">
+          How that compares, from the source
+        </h4>
+        <dl class="mt-3 grid gap-3 sm:grid-cols-3">
+          {
+            fees.competitorSurvey
+              .filter((c) => c.publishable)
+              .map((c) => (
+                <div class="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+                  <dt class="text-xs text-slate-500">{c.basis}</dt>
+                  <dd class="mt-1 font-mono text-2xl text-slate-300">{c.percentOfRewards}%</dd>
+                  <dd class="mt-1 text-xs text-slate-600">
+                    {c.name.split(' — ')[1] ?? c.name}
+                  </dd>
+                  <dd class="mt-1">
+                    <a
+                      href={c.snapshot}
+                      rel="noreferrer nofollow noopener"
+                      target="_blank"
+                      class="text-xs text-indigo-400 underline decoration-indigo-500/40 underline-offset-2 hover:text-indigo-300"
+                    >
+                      snapshot ↗
+                    </a>
+                  </dd>
+                </div>
+              ))
+          }
+        </dl>
+        <p class="mt-3 text-xs leading-relaxed text-slate-500">
+          CrowdNode, quoted from its own knowledge-base article
+          {' '}<span class="font-mono">knowledge.crowdnode.io/en/articles/2225953</span>. The fee is a
+          cut of the <span class="text-slate-400">reward</span>, not of the deposit. The custodial rate
+          moved from 15% to 35% between the two captures below; both are shown so the change is
+          visible rather than averaged. This is a competitor snapshot, not a claim about our own terms:
+          our custodial rate is the {fees.custodialPercent}% above, and our shared-pool rate is a
+          recommendation ({fees.sharedPoolBand.lowPercent}–{fees.sharedPoolBand.highPercent}%, i.e.
+          {fees.sharedPoolBand.recommendedPercent}% suggested), which nothing charges yet.
+        </p>
+      </div>
     </div>
 
     <p class="mt-8 text-xs leading-relaxed text-slate-500">

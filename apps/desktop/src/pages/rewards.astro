@@ -80,7 +80,7 @@ const monthlyMax = Math.max(...monthly.map((m) => m.amount));
       <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-lg border border-titan-800 bg-titan-950/40 p-3" data-earn="gross-node">
           <p class="text-xs tracking-wide text-slate-500 uppercase">One node, gross</p>
-          <p class="mt-1.5 font-mono text-lg text-slate-100">
+          <p class="mt-1.5 font-mono text-xl text-slate-300">
             {dash4(nodeEarnings.grossPerYear)}<span class="text-xs text-slate-500"> /yr</span>
           </p>
           <p class="mt-1 text-xs text-slate-500">{nodeEarnings.grossApy.toFixed(2)}% on 1,000 DASH</p>
@@ -88,7 +88,7 @@ const monthlyMax = Math.max(...monthly.map((m) => m.amount));
 
         <div class="rounded-lg border border-titan-800 bg-titan-950/40 p-3" data-earn="net-node">
           <p class="text-xs tracking-wide text-slate-500 uppercase">One node, custodial</p>
-          <p class="mt-1.5 font-mono text-lg text-slate-100">
+          <p class="mt-1.5 font-mono text-xl text-slate-300">
             {dash4(nodeEarnings.netPerYear)}<span class="text-xs text-slate-500"> /yr</span>
           </p>
           <p class="mt-1 text-xs text-slate-500">
@@ -98,7 +98,7 @@ const monthlyMax = Math.max(...monthly.map((m) => m.amount));
 
         <div class="rounded-lg border border-titan-800 bg-titan-950/40 p-3" data-earn="share-gross">
           <p class="text-xs tracking-wide text-slate-500 uppercase">125 DASH share, gross</p>
-          <p class="mt-1.5 font-mono text-lg text-slate-100">
+          <p class="mt-1.5 font-mono text-xl text-slate-300">
             {dash4(shareEarnings.grossPerYear)}<span class="text-xs text-slate-500"> /yr</span>
           </p>
           <p class="mt-1 text-xs text-slate-500">
@@ -106,15 +106,23 @@ const monthlyMax = Math.max(...monthly.map((m) => m.amount));
           </p>
         </div>
 
+        <!--
+          The headline figure, and the only one deliberately set larger and
+          brighter than its neighbours. An operator scanning this row should
+          land on what they actually keep, not on the gross or the node-level
+          figure above it.
+        -->
         <div
-          class="rounded-lg border border-titan-500/30 bg-titan-500/5 p-3"
+          class="rounded-lg border-2 border-titan-500/40 bg-titan-500/10 p-3"
           data-earn="share-net"
         >
-          <p class="text-xs tracking-wide text-titan-300 uppercase">125 DASH share, custodial</p>
-          <p class="mt-1.5 font-mono text-lg text-white">
-            {dash4(shareEarnings.netPerYear)}<span class="text-xs text-slate-500"> /yr</span>
+          <p class="text-xs font-semibold tracking-wide text-titan-200 uppercase">
+            125 DASH share, custodial
           </p>
-          <p class="mt-1 text-xs text-slate-500">
+          <p class="mt-1.5 font-mono text-3xl font-semibold text-white">
+            {dash4(shareEarnings.netPerYear)}<span class="text-sm text-titan-200/70"> /yr</span>
+          </p>
+          <p class="mt-1 text-xs text-titan-200/70">
             {shareEarnings.netApy.toFixed(2)}% after our {fees.custodialPercent}% fee
           </p>
         </div>

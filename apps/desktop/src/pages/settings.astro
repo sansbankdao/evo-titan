@@ -6,6 +6,7 @@
 // transport exists and no node was reachable when this was written.
 import Layout from '../layouts/Layout.astro';
 import Toggle from '../components/Toggle.astro';
+import DemoModeToggle from '../components/DemoModeToggle.astro';
 import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
 ---
 
@@ -15,6 +16,33 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
     <p class="mt-1 text-sm text-slate-400">
       Preferences are stored locally. Nothing on this screen is connected to a node yet.
     </p>
+
+    <!--
+      Demo Mode.
+
+      Given its own section ABOVE every other preference, because it is the
+      only control on this screen that actually does something and it governs
+      what the rest of the app renders. Filing it inside "Application" beside
+      a row of dead toggles would imply it is equally inert.
+    -->
+    <section class="mt-6 rounded-lg border border-titan-500/25 bg-titan-500/5 p-4" data-section="demo-mode">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-200">Demo Mode</h2>
+        <span
+          class="rounded-full border border-titan-500/30 bg-titan-500/10 px-2 py-0.5 text-xs font-medium text-titan-300"
+          data-demo-badge
+        >
+          Wired
+        </span>
+      </div>
+      <p class="mt-1 text-xs leading-relaxed text-slate-500">
+        The one setting in this build that is connected to something. It toggles the mock
+        data on and off across every screen, and it takes the "MOCK DATA" warning with it.
+      </p>
+      <div class="mt-2">
+        <DemoModeToggle id="demo-mode" />
+      </div>
+    </section>
 
     <!--
       Connection.
@@ -145,7 +173,8 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
     <section class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="application">
       <h2 class="text-sm font-semibold text-slate-200">Application</h2>
       <p class="mt-0.5 text-xs text-slate-500">
-        Only settings that already affect this build are enabled.
+        Only settings that already affect this build are enabled. Demo Mode, above, is the one
+        that does; the rest are shown so the shape is legible.
       </p>
       <div class="mt-2">
         {appPrefs.map((pref) => <Toggle {...pref} />)}
@@ -162,7 +191,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
         </div>
         <div class="flex justify-between gap-4">
           <dt class="text-slate-500">Data source</dt>
-          <dd class="font-mono text-amber-400/80">Mock</dd>
+          <dd class="font-mono text-amber-400/80" data-setting="data-source">Mock</dd>
         </div>
         <div class="flex justify-between gap-4">
           <dt class="text-slate-500">Documentation</dt>

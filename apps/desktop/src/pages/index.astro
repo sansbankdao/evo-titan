@@ -110,31 +110,33 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
       <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div data-earn="node-gross">
           <p class="text-xs tracking-wide text-slate-500 uppercase">Node, gross</p>
-          <p class="mt-1 font-mono text-lg text-slate-100">
+          <p class="mt-1 font-mono text-xl text-slate-300">
             {dash4(nodeEarnings.grossPerYear)}
           </p>
           <p class="text-xs text-slate-500">{nodeEarnings.grossApy.toFixed(2)}% on 1,000 DASH</p>
         </div>
         <div data-earn="node-net">
           <p class="text-xs tracking-wide text-slate-500 uppercase">Node, custodial</p>
-          <p class="mt-1 font-mono text-lg text-slate-100">
+          <p class="mt-1 font-mono text-xl text-slate-300">
             {dash4(nodeEarnings.netPerYear)}
           </p>
           <p class="text-xs text-slate-500">{nodeEarnings.netApy.toFixed(2)}% after {fees.custodialPercent}% fee</p>
         </div>
         <div data-earn="share-gross">
           <p class="text-xs tracking-wide text-slate-500 uppercase">125 DASH share, gross</p>
-          <p class="mt-1 font-mono text-lg text-slate-100">
+          <p class="mt-1 font-mono text-xl text-slate-300">
             {dash4(shareEarnings.grossPerYear)}
           </p>
           <p class="text-xs text-slate-500">{shareEarnings.grossApy.toFixed(2)}% on 125 DASH</p>
         </div>
-        <div data-earn="share-net">
-          <p class="text-xs tracking-wide text-titan-300 uppercase">125 DASH share, custodial</p>
-          <p class="mt-1 font-mono text-lg text-white">
+        <!-- The headline figure. Larger and brighter than the three above it,
+             so the row resolves to what a depositor keeps. -->
+        <div data-earn="share-net" class="rounded-md border-2 border-titan-500/40 bg-titan-500/10 p-2 -m-2">
+          <p class="text-xs font-semibold tracking-wide text-titan-200 uppercase">125 DASH share, custodial</p>
+          <p class="mt-1 font-mono text-3xl font-semibold text-white">
             {dash4(shareEarnings.netPerYear)}
           </p>
-          <p class="text-xs text-slate-500">{shareEarnings.netApy.toFixed(2)}% after {fees.custodialPercent}% fee</p>
+          <p class="text-xs text-titan-200/70">{shareEarnings.netApy.toFixed(2)}% after {fees.custodialPercent}% fee</p>
         </div>
       </div>
 

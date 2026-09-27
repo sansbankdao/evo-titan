@@ -61,7 +61,7 @@ const gapPct = 100 - poolProgress.pct;
 const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500'];
 ---
 
-<Layout title="Custodial pool" active="custodial">
+<Layout title="Custodial Pool" active="custodial">
   <div class="mx-auto w-full max-w-6xl px-6 py-6">
     <!--
       PLANNED banner.
@@ -219,24 +219,25 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
       <div class="mt-3 grid gap-3 sm:grid-cols-3">
         <div data-proj="gross">
           <p class="text-xs tracking-wide text-slate-500 uppercase">Gross on {shareEarnings.deposit} DASH</p>
-          <p class="mt-1 font-mono text-lg text-slate-100">
+          <p class="mt-1 font-mono text-xl text-slate-300">
             {dash4(shareEarnings.grossPerYear)}<span class="text-xs text-slate-500"> /yr</span>
           </p>
           <p class="text-xs text-slate-500">{shareEarnings.grossApy.toFixed(2)}% on {shareEarnings.deposit} DASH</p>
         </div>
-        <div data-proj="fee">
-          <p class="text-xs tracking-wide text-slate-500 uppercase">Less {fees.custodialPercent}% fee</p>
-          <p class="mt-1 font-mono text-lg text-rose-300">
-            −{dash4(shareEarnings.feePerYear)}<span class="text-xs text-slate-500"> /yr</span>
+        <div data-proj="fee" class="rounded-md border border-rose-500/20 bg-rose-500/5 p-2 -m-2">
+          <p class="text-xs tracking-wide text-rose-300/80 uppercase">Less {fees.custodialPercent}% fee</p>
+          <p class="mt-1 font-mono text-xl text-rose-300">
+            −{dash4(shareEarnings.feePerYear)}<span class="text-xs text-rose-300/50"> /yr</span>
           </p>
-          <p class="text-xs text-slate-500">To us, for running the node</p>
+          <p class="text-xs text-rose-300/50">To us, for running the node</p>
         </div>
-        <div data-proj="net">
-          <p class="text-xs tracking-wide text-titan-300 uppercase">You keep</p>
-          <p class="mt-1 font-mono text-lg text-white">
-            {dash4(shareEarnings.netPerYear)}<span class="text-xs text-slate-500"> /yr</span>
+        <!-- The headline: the figure a depositor actually receives. -->
+        <div data-proj="net" class="rounded-md border-2 border-titan-500/40 bg-titan-500/10 p-2 -m-2">
+          <p class="text-xs font-semibold tracking-wide text-titan-200 uppercase">You keep</p>
+          <p class="mt-1 font-mono text-3xl font-semibold text-white">
+            {dash4(shareEarnings.netPerYear)}<span class="text-sm text-titan-200/70"> /yr</span>
           </p>
-          <p class="text-xs text-slate-500">{shareEarnings.netApy.toFixed(2)}% on {shareEarnings.deposit} DASH</p>
+          <p class="text-xs text-titan-200/70">{shareEarnings.netApy.toFixed(2)}% on {shareEarnings.deposit} DASH</p>
         </div>
       </div>
 
