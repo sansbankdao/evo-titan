@@ -216,6 +216,20 @@ const swatches = ['bg-titan-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500'
         {' '}{shareEarnings.fraction * 100}% of one node's reward before our fee.
       </p>
 
+      <!--
+        Why this costs more than the other two. Stated on the screen where the
+        price is shown, because a depositor comparing this against the shared
+        pool will otherwise see only that it is double.
+      -->
+      <p class="mt-1 text-xs leading-relaxed text-slate-500" data-fee-comparison>
+        This is the most expensive of our three arrangements and it is the only one where we hold
+        keys: full self-custody of a whole node is
+        {' '}<span class="font-mono text-emerald-300">{fees.selfCustodyPercent}%</span>, the self-custodial
+        shared pool is {' '}<span class="font-mono text-titan-300">{fees.sharedPoolPercent}%</span>, and this
+        service is {' '}<span class="font-mono text-titan-300">{fees.custodialPercent}%</span>. You are paying
+        for custody, not for a different node.
+      </p>
+
       <div class="mt-3 grid gap-3 sm:grid-cols-3">
         <div data-proj="gross">
           <p class="text-xs tracking-wide text-slate-500 uppercase">Gross on {shareEarnings.deposit} DASH</p>

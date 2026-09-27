@@ -72,15 +72,22 @@ export const yieldModel = {
 } as const;
 
 /**
- * Fees. `custodialPercent` is the product price the operator set for the
- * custodial service (we hold the keys). `sharedPoolBand` is a RECOMMENDATION
- * for the self-custodial shared pool, where we coordinate but hold nothing.
+ * Fees. Three arrangements, priced by how much trust we are asking for.
+ *
+ *   selfCustodyPercent   0   — the operator holds everything and we charge
+ *                              nothing. Titan PRO is an optional subscription,
+ *                              not a cut of the reward.
+ *   sharedPoolPercent    15  — self-custodial shares; we coordinate only.
+ *   custodialPercent     30  — we hold the keys. The only arrangement where we
+ *                              take custody risk.
  *
  * In-protocol the fee is CProRegTx.nOperatorReward, in basis points, applied at
  * src/masternode/payments.cpp:167 BEFORE the share split at :175 — so it comes
  * off the whole node, not off each depositor's slice.
  */
 export const fees = {
+  selfCustodyPercent: 0,
+  sharedPoolPercent: 15,
   custodialPercent: 30,
   sharedPoolBand: { lowPercent: 10, highPercent: 20, recommendedPercent: 15 },
 } as const;
@@ -97,12 +104,44 @@ export const nodeEarnings = {
   get netApy(): number {
     return (this.netPerYear / protocol.regularCollateral) * 100;
   },
+  /**
+   * Full self-custody: the operator holds the collateral, the keys and the
+   * signing. We hold nothing, so the fee is 0 and the net equals the gross.
+   * Kept as a separate getter rather than special-cased at each call site, so
+   * the zero is visible in the model and not just in the prose.
+   */
+  get selfCustodyApy(): number {
+    return this.grossApy;
+  },
 } as const;
 
 /**
- * A worked share: 125 DASH of a 1,000 DASH node, i.e. 12.5%. Dash Core splits
- * by collateral (SplitAmountByShares), so the share earns 12.5% of the node
- * reward; the custodial fee then comes off the top.
+ * The self-custodial shared pool: 15% of the gross node reward, the recommended
+ * cut inside `fees.sharedPoolBand`. Separate from `shareEarnings`, which prices
+ * the CUSTODIAL service — conflating the two would put a custody price on a
+ * trustless arrangement.
+ */
+export const poolShareEarnings = (() => {
+  const deposit = 125;
+  const fraction = deposit / protocol.regularCollateral;
+  const gross = nodeEarnings.grossPerYear * fraction;
+  const fee = (gross * fees.sharedPoolPercent) / 100;
+  return {
+    deposit,
+    fraction,
+    grossPerYear: gross,
+    feePerYear: fee,
+    netPerYear: gross - fee,
+    grossApy: (gross / deposit) * 100,
+    netApy: ((gross - fee) / deposit) * 100,
+  };
+})();
+
+/**
+ * A worked share of the CUSTODIAL service: 125 DASH of a 1,000 DASH node, i.e.
+ * 12.5%. Dash Core splits by collateral (SplitAmountByShares), so the share
+ * earns 12.5% of the node reward; the custodial fee then comes off the top.
+ * The self-custodial pool is priced separately in `poolShareEarnings`.
  */
 export const shareEarnings = (() => {
   const deposit = 125;

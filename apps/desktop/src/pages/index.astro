@@ -18,6 +18,7 @@ import {
   yieldModel,
   nodeEarnings,
   shareEarnings,
+  poolShareEarnings,
   fees,
   dash4,
 } from '../lib/mock';
@@ -93,7 +94,10 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
       consensus, with every input cited in `mock.ts -> yieldModel`. The node
       count is the single unsourced input (live network state, unreadable with
       no node), so it is shown as an explicit assumption rather than hidden.
-      The fee is our product price, not a protocol constant.
+      The three fees are our product prices, not protocol constants.
+
+      Ordered cheapest-trust first: full self-custody costs NOTHING because we
+      hold nothing; the shared pool is coordination at 15%; custody is 30%.
     -->
     <section
       class="mt-5 rounded-lg border border-titan-500/25 bg-titan-500/5 p-4"
@@ -107,36 +111,38 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
         </span>
       </div>
 
-      <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div data-earn="node-gross">
-          <p class="text-xs tracking-wide text-slate-500 uppercase">Node, gross</p>
-          <p class="mt-1 font-mono text-xl text-slate-300">
-            {dash4(nodeEarnings.grossPerYear)}
+      <div class="mt-3 grid gap-3 sm:grid-cols-3">
+        <div data-earn="self-custody">
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="text-xs tracking-wide text-emerald-200 uppercase">Full self-custody</p>
+            <p class="font-mono text-3xl font-semibold text-emerald-300">{fees.selfCustodyPercent}%</p>
+          </div>
+          <p class="mt-1 font-mono text-xl text-slate-300">{dash4(nodeEarnings.grossPerYear)}</p>
+          <p class="text-xs text-emerald-200/70">
+            {nodeEarnings.selfCustodyApy.toFixed(2)}% on 1,000 DASH — you keep all of it
           </p>
-          <p class="text-xs text-slate-500">{nodeEarnings.grossApy.toFixed(2)}% on 1,000 DASH</p>
         </div>
-        <div data-earn="node-net">
-          <p class="text-xs tracking-wide text-slate-500 uppercase">Node, custodial</p>
-          <p class="mt-1 font-mono text-xl text-slate-300">
-            {dash4(nodeEarnings.netPerYear)}
+        <!-- The two paid arrangements, both on a 125 DASH share so they are
+             comparable directly. The shared row is the recommendation. -->
+        <div data-earn="shared-pool" class="rounded-md border border-titan-500/25 bg-titan-500/5 p-2 -m-2">
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="text-xs tracking-wide text-titan-200 uppercase">Shared pool · your keys</p>
+            <p class="font-mono text-3xl font-semibold text-titan-300">{fees.sharedPoolPercent}%</p>
+          </div>
+          <p class="mt-1 font-mono text-xl text-slate-300">{dash4(poolShareEarnings.netPerYear)}</p>
+          <p class="text-xs text-slate-500">
+            {poolShareEarnings.netApy.toFixed(2)}% on a 125 DASH share, after our {fees.sharedPoolPercent}% cut
           </p>
-          <p class="text-xs text-slate-500">{nodeEarnings.netApy.toFixed(2)}% after {fees.custodialPercent}% fee</p>
         </div>
-        <div data-earn="share-gross">
-          <p class="text-xs tracking-wide text-slate-500 uppercase">125 DASH share, gross</p>
-          <p class="mt-1 font-mono text-xl text-slate-300">
-            {dash4(shareEarnings.grossPerYear)}
+        <div data-earn="custodial">
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="text-xs tracking-wide text-slate-500 uppercase">Custodial · our keys</p>
+            <p class="font-mono text-3xl font-semibold text-titan-300">{fees.custodialPercent}%</p>
+          </div>
+          <p class="mt-1 font-mono text-xl text-slate-300">{dash4(shareEarnings.netPerYear)}</p>
+          <p class="text-xs text-slate-500">
+            {shareEarnings.netApy.toFixed(2)}% on a 125 DASH share, after our {fees.custodialPercent}% cut
           </p>
-          <p class="text-xs text-slate-500">{shareEarnings.grossApy.toFixed(2)}% on 125 DASH</p>
-        </div>
-        <!-- The headline figure. Larger and brighter than the three above it,
-             so the row resolves to what a depositor keeps. -->
-        <div data-earn="share-net" class="rounded-md border-2 border-titan-500/40 bg-titan-500/10 p-2 -m-2">
-          <p class="text-xs font-semibold tracking-wide text-titan-200 uppercase">125 DASH share, custodial</p>
-          <p class="mt-1 font-mono text-3xl font-semibold text-white">
-            {dash4(shareEarnings.netPerYear)}
-          </p>
-          <p class="text-xs text-titan-200/70">{shareEarnings.netApy.toFixed(2)}% after {fees.custodialPercent}% fee</p>
         </div>
       </div>
 

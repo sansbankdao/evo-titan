@@ -10,7 +10,7 @@
 //   - shared registration is Regular-node ONLY (providertx.cpp:280 rejects an
 //     Evo node with `bad-protx-shares-evo`)
 import Layout from '../layouts/Layout.astro';
-import { fleet, protocol, short } from '../lib/mock';
+import { fleet, protocol, short, fees } from '../lib/mock';
 
 const shared = fleet.filter((n) => n.shares.length > 0);
 
@@ -126,9 +126,25 @@ const splits = shared.map((node) => {
       }
     </div>
 
-    <p class="mt-6 text-xs leading-relaxed text-slate-600">
+    <!--
+      The pool fee, stated on the screen where an owner would look for it rather
+      than only in the marketing. It is our recommended price and it is not live;
+      it is shown so a co-owner reading the split can see what the arrangement
+      will cost before they sign anything.
+    -->
+    <p class="mt-6 text-xs leading-relaxed text-slate-500" data-pool-fee>
+      This is the <span class="text-slate-300">self-custodial</span> pool: every share above pays its own
+      reward script and we never hold a key. Our recommended cut is
+      {' '}<span class="font-mono text-titan-300">{fees.sharedPoolPercent}%</span> of the gross node reward,
+      inside a {fees.sharedPoolBand.lowPercent}–{fees.sharedPoolBand.highPercent}% band. On a node this
+      size it comes off the top before the split, so each owner loses the same percentage of their own
+      reward. Full self-custody of a whole node costs {fees.selfCustodyPercent}% — see the
+      {' '}<a href="/rewards/" class="text-titan-300 underline decoration-dotted hover:text-titan-200">rewards model</a>.
+    </p>
+
+    <p class="mt-3 text-xs leading-relaxed text-slate-600">
       MOCK DATA. The share rules above are Dash Core v24 consensus and sourced; the owners,
-      amounts and keys are invented.
+      amounts and keys are invented. The fee is a recommendation and nothing charges it yet.
     </p>
   </div>
 </Layout>

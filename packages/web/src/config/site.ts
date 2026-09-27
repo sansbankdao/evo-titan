@@ -558,8 +558,41 @@ export const yieldModel = {
  * `SplitAmountByShares(masternodeReward, shares)` at payments.cpp:175. So the
  * operator cut comes off the WHOLE node first, and each depositor's slice is
  * 12.5% of what is left (at 8 equal shares), not 12.5% of the original.
+ *
+ * THE THREE ARRANGEMENTS, cheapest-trust first. The fee tracks who holds the
+ * keys, because that is what we are actually being paid for:
+ *
+ *   self-custody   FULL SELF-CUSTODY. The operator owns the 1,000 DASH, holds
+ *                  the keys, and signs locally. We never touch the collateral
+ *                  and we charge NOTHING — there is no on-chain fee field, no
+ *                  custody, and no counterparty. Titan PRO is the optional
+ *                  paid tier on top; the protocol access is free forever.
+ *   shared pool    SELF-CUSTODIAL shares. The depositor keeps their keys and a
+ *                  share's reward script pays them directly; we only
+ *                  coordinate (assemble the participant set, run
+ *                  shared_register_prepare / shared_combine, keep the node
+ *                  updated). Fee is the RECOMMENDED sharedPoolPercent, inside
+ *                  sharedPoolBand.
+ *   custodial       THE CUSTODIAL SERVICE. We hold the keys, accept any amount,
+ *                  and form the shares ourselves. Highest fee, because this is
+ *                  the only arrangement where we carry custody risk.
  */
 export const fees = {
+  /**
+   * FULL SELF-CUSTODY: zero. This is not a discount, it is the absence of a
+   * service. We hold nothing, coordinate nothing, and take nothing. The only
+   * thing on offer is the free client. Titan PRO stays available as an opt-in
+   * and is billed as a subscription ($5/mo, see `tiers`), NOT as a cut of the
+   * reward — an operator who never buys PRO pays 0% forever.
+   */
+  selfCustodyPercent: 0,
+
+  /**
+   * The recommended pool cut, in percent of gross masternode reward. See
+   * `sharedPoolBand` below for the reasoning and the sourced anchor.
+   */
+  sharedPoolPercent: 15,
+
   /** Our custodial service fee, in percent of gross masternode reward. */
   custodialPercent: 30,
 
@@ -627,20 +660,42 @@ export const fees = {
   ],
 
   /**
-   * The fee band we are willing to offer on the SELF-CUSTODIAL shared pool,
-   * where the operator does hold the keys and our job is coordination, not
-   * custody. Lower than the custodial rate because we take no custody risk and
-   * post no capital of our own.
+   * The fee band on the SELF-CUSTODIAL shared pool, where the depositor holds
+   * the keys and our job is coordination, not custody. Lower than the custodial
+   * rate because we take no custody risk.
    *
-   * MOCK: this is a recommendation, not a decision. Nothing charges it.
+   * 15 IS THE RECOMMENDATION, not 10. The reasoning, in order:
+   *
+   *   1. The incumbent anchor. CrowdNode charges 20% of rewards for non-custodial
+   *      masternode shares (2025-06-20 capture of
+   *      knowledge.crowdnode.io/en/articles/2225953, pinned in
+   *      `competitorSurvey`). 15% undercuts the only sourced comparable for the
+   *      same trust arrangement, which is the point of a band at all.
+   *   2. 10% is the land-grab price, and it is hard to raise afterwards. A fee
+   *      that has to move upward later is worse for early depositors than one
+   *      that is set honestly at the start, because the second cohort pays less
+   *      than the first. 15% leaves the headroom spent now rather than
+   *      pre-announced.
+   *   3. Compared like-for-like against our own custodial rate, 15% is already
+   *      the aggressive end: it is HALF the 30% we charge when we take the keys.
+   *
+   * What the fee is NOT: it is not a cut of the depositor's own slice, and it is
+   * not a per-share charge. `nOperatorReward` is basis points of the whole-node
+   * reward, taken at src/masternode/payments.cpp:167 BEFORE the share split at
+   * :175. It therefore lands on every depositor in proportion to their
+   * collateral, so a 125 DASH share and a 500 DASH share lose the same 15% of
+   * their own reward. The band exists so that a node assembled differently —
+   * fewer participants, more of our own effort — can be priced inside it without
+   * re-opening the decision.
+   *
+   * MOCK: still a recommendation. Nothing charges it yet, and it is not an offer.
    */
   sharedPoolBand: {
     lowPercent: 10,
     highPercent: 20,
     recommendedPercent: 15,
     rationale:
-      'Coordination only: we assemble the participant set, run shared_register_prepare and shared_combine, and keep the node updated. We take no custody risk and post no collateral, so the rate sits below the custodial one. The band is anchored on the sourced non-custodial comparison — CrowdNode charges 20% of rewards for non-custodial shares (2025-06-20 capture of knowledge.crowdnode.io/en/articles/2225953) — so 10-20% keeps us at or under the incumbent for the same trustless arrangement, while our 30% custodial rate sits under their 35% custodial rate.',
-  },
+      'Coordination only: we assemble the participant set, run shared_register_prepare and shared_combine, and keep the node updated. We hold no keys and post no collateral of our own, so the rate sits below the custodial one. The band is anchored on the sourced non-custodial comparison — CrowdNode charges 20% of rewards for non-custodial shares (2025-06-20 capture of knowledge.crowdnode.io/en/articles/2225953) — so 10-20% keeps us at or under the incumbent for the same trustless arrangement, while our 30% custodial rate sits under their 35% custodial rate. 15% is recommended over 10% because the only sourced comparable is 20%, because a 10% price is hard to raise later without penalising early depositors, and because 15% is already half of what we charge once we take custody.' },
 };
 
 /** MOCK roadmap. Nothing here is scheduled or funded. */
