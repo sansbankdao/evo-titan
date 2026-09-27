@@ -141,8 +141,10 @@ const humanise = (kind: string): string =>
     }
 
     <p class="mt-6 text-xs leading-relaxed text-slate-600">
-      MOCK DATA. Signing is not implemented: src/lib/rpc.ts has no transport and no RPC has been
-      verified against dashd. The buttons above are disabled for that reason, not to gate anything.
+      MOCK DATA. Signing is not implemented: the transport exists (src/lib/rpc.ts) and the
+      shared_* surface has been exercised against a regtest node, but no signing path is wired to
+      this UI and no wallet holds keys here. The buttons above are disabled for that reason, not to
+      gate anything.
     </p>
   </div>
 </Layout>

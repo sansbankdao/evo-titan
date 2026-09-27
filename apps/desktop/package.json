@@ -12,6 +12,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check",
+    "test": "node --test src/lib/rpc-core.test.ts",
     "lint": "eslint .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

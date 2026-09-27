@@ -1,8 +1,10 @@
 mod menu;
+mod rpc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .invoke_handler(tauri::generate_handler![rpc::rpc_call])
     .menu(|app| menu::build(app))
     .on_menu_event(|app, event| {
       // `menu::handle` owns the ids it created. Anything it does not claim is
