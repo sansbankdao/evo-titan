@@ -91,7 +91,7 @@ Rules:
 
 The shared-pool fee mechanism is now closed end-to-end:
 
-- `nOperatorReward` exists **only in `CProRegTx`** and is **immutable after registration**. `shared_register_prepare` takes it as param 5 (0–10000 bp) and there is **no operator-payout-address argument**.
+- `nOperatorReward` exists **only in `CProRegTx`** and is **immutable after registration**. `shared_register_prepare` takes it as **argument 6**, a **percent string** `"0.00"`–`"100.00"` (parsed with 2 decimals and stored as 0–10000 basis points), and there is **no operator-payout-address argument**.
 - `PrepareSharedRegistration` sets `nOperatorReward` but never sets `scriptOperatorPayout`, and `CDeterministicMNState(const CProRegTx&)` does not copy one, so it defaults to empty `CScript()`. `src/masternode/payments.cpp` pays the operator **only when `nOperatorReward != 0 && scriptOperatorPayout != CScript()`** — therefore **`nOperatorReward` alone is inert** on a shared node and the reward folds into the share split.
 - **`protx update_service` CAN set the payout on a shared node.** `protx_update_service_common_wrapper` (src/rpc/evo.cpp:1049) has **no** shared-node guard — it parses the payout address unchecked and delegates to `evo::provider::UpdateService`.
 - **`UpdateService` (src/evo/providertx_service.cpp:788) has no `IsShared()` rejection**, unlike `UpdateRegistrar` (same file:868), which explicitly refuses shared nodes. So ProUpServTx is allowed on a shared node.
@@ -212,8 +212,24 @@ The earnings figures are the reason the visitor is on the page, so the hierarchy
 All desktop data is mock and lives in `apps/desktop/src/lib/mock.ts`, behind a file header stating so.
 
 - A **non-dismissible** banner renders on every desktop screen: `MOCK DATA — no node connected`. Keep it. It exists so a screenshot can never be mistaken for real fleet data.
-- `apps/desktop/src/lib/rpc.ts` is the seam where real calls go. `DashRpc.call()` **throws by design.** Do not wire a fake transport that returns plausible values: the UI would appear connected while reading nothing. Every method carries `TODO: verify against dashd` and those markers stay until a call has actually been run against a real node.
-- As of this writing no RPC has been verified: `dash-cli` and `dashd` are not installed, no `dashd` process runs, no RPC port is listening, and no `dash.conf` exists.
+- `apps/desktop/src/lib/rpc.ts` is the seam where real calls go. `DashRpc.call()` **throws by design.** Do not wire a fake transport that returns plausible values: the UI would appear connected while reading nothing. Methods carry `TODO: verify against dashd` until the call has actually been RUN against a real node; a signature confirmed from `help` is not the same as a call confirmed to succeed.
+- **A v24 node IS obtainable, and was run on 2026-09-27.** `docker` is present and the daemon responds; `docker pull dashpay/dashd:24.0.0-rc.1` works. Recipe (regtest, no sync, no peer traffic):
+
+  ```sh
+  docker run -d --name etdashd -p 127.0.0.1:19898:19898 dashpay/dashd:24.0.0-rc.1 \
+    dashd -regtest -server -txindex -listen=0 \
+      -rpcport=19898 -rpcbind=0.0.0.0 \
+      -rpcuser=titan -rpcpassword=titanlocaldev \
+      -rpcallowip=0.0.0.0/0 -fallbackfee=0.0001
+  ```
+
+  Notes that cost time to find: the image runs as uid 1000 (`dash`) and its data dir is `/home/dash/.dashcore`, so a bind mount must be `chmod 777`; `-rpcbind` is rejected outside a `[regtest]` config section **only** when passed as a config file line — it is accepted on the command line; without `-rpcport` the node binds RPC on `::1` at a port it does not report via `docker port`; and `-listen=0` keeps it off the network entirely.
+- **The seven shared commands are SUBCOMMANDS of `protx`.** `src/rpc/evo.cpp:2439-2445` registers them in the `protx` table as `"protx shared_sign"`, `"protx shared_combine"` and so on. A top-level call to `shared_sign` returns `-32601` (method not found) even though the string is in the binary. Call them as `protx` with the subcommand as `params[0]`.
+- **Three facts CORRECTED against the live node** (regtest v24.0.0-rc.1, 2026-09-27). Each was wrong in the first, source-derived draft:
+  1. `operatorReward` on `shared_register_prepare` is a **PERCENT STRING**, e.g. `"15.00"`, not basis points. The node help says "The fraction in %% to share with the operator (0.00 to 100.00)", and the source at `src/rpc/evo.cpp:2166-2173` confirms `ParseFixedPoint(val, 2, &operatorReward)` then a 0–10000 check before `static_cast<uint16_t>`.
+  2. `shared_update_share` takes a **fourth argument, `feeSourceAddress`**, a wallet address the fee is paid from. Omitting it yields `-1` (usage text); supplying it reaches validation.
+  3. `shared_combine` has a **third `submit` argument** (default `false`) which is unavailable for registrations, whose funding inputs still need signing. Signatures are **base64**, and `shared_sign` needs the wallet unlocked (-18 when no wallet is loaded).
+- The JSON-RPC envelope is confirmed working: `{"jsonrpc":"1.0","id":...,"method":"protx","params":["shared_sign","00"]}` over HTTP with HTTP basic auth reaches the wallet layer. JSON-RPC **1.0** is accepted; the `id` is echoed back as a string.
 
 **Protocol constants in copy must be sourced.** Currently sourced from Dash Core `v24.0.0-rc.1`: Regular collateral `1000 * COIN` and Evo `4000 * COIN` (`src/evo/dmn_types.h`), `MIN_SHARES{2}`/`MAX_SHARES{8}` (`src/evo/providertx.h:134-135`), `MIN_AMOUNT{100 * COIN}` (`src/evo/providertx.h:58`), Evo voting weight 4× Regular (`src/evo/dmn_types.h`), and the `bad-protx-shares-evo` rejection (`src/evo/providertx.cpp:280`). Everything else on the marketing site is **mock** and is labelled in `packages/web/src/config/site.ts`.
 

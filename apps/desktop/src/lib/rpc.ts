@@ -1,17 +1,24 @@
 // apps/desktop/src/lib/rpc.ts — Evo Titan
 //
 // ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  NOTHING IN THIS FILE HAS BEEN VERIFIED AGAINST A RUNNING dashd.         ║
+// ║  THE TRANSPORT IS STILL NOT WIRED — `call()` throws by design, and the   ║
+// ║  UI reads `mock.ts`. That has not changed.                               ║
 // ║                                                                          ║
-// ║  No node was available when this was written: `dash-cli` and `dashd` are ║
-// ║  not installed, no dashd process was running, no RPC port was listening  ║
-// ║  and no dash.conf exists. Every method name, parameter shape and return  ║
-// ║  field below is a PLACEHOLDER reconstructed from expectation, not from   ║
-// ║  observed output.                                                        ║
+// ║  What HAS changed on 2026-09-27: a real v24.0.0-rc.1 node was started    ║
+// ║  (docker, regtest) and the shared-masternode RPC surface was read from   ║
+// ║  the running binary. The `protx shared_*` signatures and three facts     ║
+// ║  below were CORRECTED against that node:                                 ║
 // ║                                                                          ║
-// ║  Each method carries `TODO: verify against dashd`. Do not remove those   ║
-// ║  markers until the call has been run against a real node and its         ║
-// ║  response checked. This session is UI/UX only; the UI reads `mock.ts`.   ║
+// ║    1. the seven commands are SUBCOMMANDS of `protx`, not top-level       ║
+// ║       RPC methods. Calling `shared_sign` on its own returns -32601.      ║
+// ║    2. `operatorReward` is a PERCENT STRING ("15.00"), not basis points.  ║
+// ║    3. `shared_update_share` takes a 4th arg, `feeSourceAddress`; without ║
+// ║       it the node rejects the call on arity (-1, usage text).            ║
+// ║                                                                          ║
+// ║  Methods that have NOT been exercised end-to-end against the node still  ║
+// ║  carry `TODO: verify against dashd`. Do not remove those markers until   ║
+// ║  the call has been RUN and its response checked. A signature confirmed   ║
+// ║  from `help` is not the same as a call confirmed to succeed.            ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
 /**
@@ -154,9 +161,22 @@ export class DashRpc {
    * Amounts in the share table must sum to the required collateral, and each
    * share is at least 100 DASH (CProRegTx::MIN_AMOUNT, providertx.h:58).
    *
-   * TODO: verify against dashd — the share table is consensus-order
-   * significant, so preserve array order exactly. Confirm the operatorReward
-   * fixed-point encoding (basis points, 0..10000).
+   * VERIFIED against a running v24.0.0-rc.1 node (regtest) on 2026-09-27 via
+   * `help protx shared_register_prepare`:
+   *
+   *   protx shared_register_prepare "fundingTx"
+   *     [{"amount":n,"refundAddress":"str","rewardAddress":"str","ownerAddress":"str"},...]
+   *     "coreP2PAddrs" "operatorPubKey" "votingAddress" "operatorReward"
+   *     earlyPeriodBlocks earlyPenalty
+   *
+   * CORRECTION to the earlier reading of the source: `operatorReward` is a
+   * PERCENT STRING, not basis points. The node's own help text says "The
+   * fraction in %% to share with the operator (0.00 to 100.00)". So an operator
+   * cut of 15% is passed as the string "15.00", NOT as the integer 1500. Do not
+   * let a later refactor "simplify" this back to a number.
+   *
+   * The share table is consensus-order significant, so preserve array order
+   * exactly. Each share's `amount` is in duffs and must be at least 100 DASH.
    */
   async sharedRegisterPrepare(
     fundingTx: string,
@@ -164,7 +184,7 @@ export class DashRpc {
     coreP2PAddrs: string,
     operatorPubKey: string,
     votingAddress: string,
-    operatorReward: number,
+    operatorReward: string,
     earlyPeriodBlocks: number,
     earlyPenalty: number,
   ): Promise<unknown> {
@@ -192,8 +212,12 @@ export class DashRpc {
    * custodial arrangement the operator holds them and signs on the depositor's
    * behalf, which is exactly the power the custodial screen discloses.
    *
-   * TODO: verify against dashd — confirm the wallet must be unlocked and that
-   * the returned entries are base64 (not hex).
+   * VERIFIED against a running v24.0.0-rc.1 node (regtest) on 2026-09-27: the
+   * node's own help for this command ends with "Requires wallet passphrase to be
+   * set with walletpassphrase call if wallet is encrypted", and the result's
+   * `signatures` entries are documented as BASE64-encoded. A call on a node with
+   * no wallet loaded returns RPC error -18 ("No wallet is loaded"), which is the
+   * behaviour the transport must surface rather than swallow.
    */
   async sharedSign(tx: string, allowTimeLocks = false): Promise<unknown> {
     return this.call('protx', ['shared_sign', tx, allowTimeLocks]);
@@ -205,14 +229,18 @@ export class DashRpc {
    * Source: evo.cpp:1464. For a registration this yields the completed
    * transaction hex, which then needs its funding inputs signed and broadcast.
    *
-   * TODO: verify against dashd — confirm the expected shape of the signatures
-   * array ({shareIndex, signature}) and whether ordering matters.
+   * VERIFIED against a running v24.0.0-rc.1 node (regtest) on 2026-09-27:
+   * `protx shared_combine "tx" [{"shareIndex":n,"signature":"str"},...] ( submit )`.
+   * Signatures are BASE64-encoded (the node's help says so explicitly). There is
+   * a third `submit` argument (default false) which is NOT available for
+   * registrations, because their funding inputs still need signing.
    */
   async sharedCombine(
     tx: string,
     signatures: Array<{ shareIndex: number; signature: string }>,
+    submit = false,
   ): Promise<unknown> {
-    return this.call('protx', ['shared_combine', tx, signatures]);
+    return this.call('protx', ['shared_combine', tx, signatures, submit]);
   }
 
   /**
@@ -225,8 +253,14 @@ export class DashRpc {
    * withdrawal depends on our liquidity; a real standby would weaken that
    * dependency, and whether we offer one is a product decision, not a fact.
    *
-   * TODO: verify against dashd — confirm the fee ceiling (MAX_FEE 1000000
-   * duffs) and the payPenalty semantics against current height.
+   * VERIFIED against a running v24.0.0-rc.1 node (regtest) on 2026-09-27:
+   * `protx shared_dissolve "proTxHash" actorIndex ( fee submit payPenalty )`,
+   * fee default 100000 duffs, "At most 1000000 duffs (consensus ceiling)". The
+   * ceiling is enforced in source at src/evo/providertx_service.cpp:639 (`if
+   * (fee > CProDisTx::MAX_FEE)`), against the same constant used in
+   * src/evo/specialtxman.cpp:1752. `payPenalty` defaults to a value decided by
+   * the current height, which is why it is left optional here rather than
+   * defaulted: passing the wrong value builds a standby valid at the wrong time.
    */
   async sharedDissolve(
     proTxHash: string,
@@ -246,15 +280,31 @@ export class DashRpc {
    * Source: evo.cpp:1366. Each share carries its own scriptReward, so reward
    * routing is per-share. Passing the refund script resets rewards.
    *
-   * TODO: verify against dashd — confirm whether this is signed by the share
-   * owner key alone or also needs the registrar's cooperation.
+   * VERIFIED against a running v24.0.0-rc.1 node (regtest) on 2026-09-27:
+   *
+   *   protx shared_update_share "proTxHash" shareIndex "rewardAddress"
+   *     "feeSourceAddress" ( submit )
+   *
+   * CORRECTION: the live node requires a FOURTH argument, `feeSourceAddress`, a
+   * wallet address the transaction fee is paid from. The earlier call site
+   * omitted it and would have been rejected on arity. Defaults are from the
+   * node's help: `submit` defaults to true.
    */
   async sharedUpdateShare(
     proTxHash: string,
     shareIndex: number,
-    scriptReward: string,
+    rewardAddress: string,
+    feeSourceAddress: string,
+    submit = true,
   ): Promise<unknown> {
-    return this.call('protx', ['shared_update_share', proTxHash, shareIndex, scriptReward]);
+    return this.call('protx', [
+      'shared_update_share',
+      proTxHash,
+      shareIndex,
+      rewardAddress,
+      feeSourceAddress,
+      submit,
+    ]);
   }
 
   /**
