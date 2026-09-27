@@ -15,6 +15,14 @@ const items = [
   { id: 'shared', label: 'Shared Masternodes', href: '/shared' },
   { id: 'signing', label: 'Signing', href: '/signing' },
   { id: 'rewards', label: 'Rewards', href: '/rewards' },
+];
+
+// DPNS contests are a VOTING job, not a fleet view, so they sit in their own
+// group between the fleet and the account screens. They are also the one
+// screen in this build backed by real network data, which is why the entry
+// carries no mock badge while the fleet links above it do.
+const governanceItems = [
+  { id: 'contested', label: 'Contested Names', href: '/contested' },
   { id: 'activity', label: 'Activity', href: '/activity' },
 ];
 
@@ -90,6 +98,37 @@ const custodialItem = { id: 'custodial', label: 'Custodial Pool', href: '/custod
         </span>
       )}
     </a>
+
+    <div class="my-1.5 border-t border-titan-800" aria-hidden="true"></div>
+
+    {
+      governanceItems.map((item) => {
+        const isActive = item.id === active;
+        return (
+          <a
+            href={item.href}
+            aria-current={isActive ? 'page' : undefined}
+            class:list={[
+              'flex items-center justify-between rounded-md px-3 py-2 text-sm transition',
+              isActive
+                ? 'bg-titan-800 font-medium text-white'
+                : 'text-slate-400 hover:bg-titan-800/50 hover:text-slate-200',
+            ]}
+            data-nav={item.id}
+          >
+            <span>{item.label}</span>
+            {item.id === 'contested' && (
+              <span
+                class="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-xs font-medium text-emerald-300"
+                title="Reads live data from Dash Platform"
+              >
+                Live
+              </span>
+            )}
+          </a>
+        );
+      })
+    }
 
     <div class="my-1.5 border-t border-titan-800" aria-hidden="true"></div>
 

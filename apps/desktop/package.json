@@ -12,7 +12,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check",
-    "test": "node --test src/lib/rpc-core.test.ts",
+    "test": "node --test src/lib/rpc-core.test.ts src/lib/dpns.test.ts",
     "lint": "eslint .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
@@ -20,6 +20,7 @@
     "clean": "rm -rf dist .astro"
   },
   "dependencies": {
+    "@dashevo/wasm-sdk": "4.1.1",
     "@tauri-apps/api": "2.11.1",
     "astro": "7.3.3",
     "chart.js": "4.5.1"

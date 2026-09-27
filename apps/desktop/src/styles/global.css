@@ -116,3 +116,17 @@ body {
 [data-demo-mode='off'] [data-when-demo='off'] {
   display: flex;
 }
+
+/*
+ * LIVE SCREENS ARE EXEMPT FROM DEMO MODE.
+ *
+ * The empty state below the shell says "every screen in this build is mock
+ * data". On a screen that reads real network data that sentence is false, so a
+ * live page marks its empty-state element and it stays hidden even when Demo
+ * Mode is off. Its content stays visible for the same reason: hiding real data
+ * would be the worst possible outcome of a control whose only job is to stop
+ * fabricated figures being shown without their warning.
+ */
+[data-demo-mode='off'] [data-when-demo-live='hidden'] {
+  display: none;
+}

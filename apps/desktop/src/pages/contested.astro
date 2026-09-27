@@ -1,0 +1,471 @@
+---
+// apps/desktop/src/pages/contested.astro — Evo Titan
+//
+// Contested DPNS usernames. THIS SCREEN IS LIVE — the only one in this build
+// that is. It reads real state from Dash Platform's DAPI, so it does not carry
+// the app-wide MOCK banner as its data warning; instead it carries its own
+// provenance notice saying the rows came from the network.
+//
+// Why it belongs in an operator console: a contested DPNS name is resolved by
+// masternode vote, not first-come. An operator running nodes is a voter, so
+// this is governance work, not a name auction.
+//
+// The 3–19 character window is not arbitrary: the DPNS contract's contested
+// index matches `^[a-zA-Z01-]{3,19}$`, so a shorter or longer label can never
+// enter a vote. The header states it so an operator is not left wondering why
+// a name they expected is missing.
+import Layout from '../layouts/Layout.astro';
+import { DPNS_CONTRACT_ID } from '../lib/dpns';
+---
+
+<Layout title="Contested Names" active="contested" live>
+  <div class="mx-auto w-full max-w-6xl px-6 py-6" data-screen="contested">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-white">Contested Names</h1>
+        <p class="mt-1 text-sm text-slate-400">
+          DPNS labels of 3–19 characters with more than one claimant. Resolved by
+          masternode vote, not by who asked first.
+        </p>
+      </div>
+
+      <!--
+        The fetch controls. Everything here is wired: this is the one screen in
+        the build that talks to a real network, so there is nothing disabled on
+        it. The count is not preset — it is what the operator asks for, because
+        each name costs a second query for its vote state.
+      -->
+      <div class="flex flex-wrap items-center gap-2">
+        <label for="contest-limit" class="text-xs text-slate-400">Names to load</label>
+        <select
+          id="contest-limit"
+          class="rounded-md border border-titan-800 bg-titan-900 px-2 py-1.5 text-xs text-slate-200"
+          data-contest-limit
+        >
+          <option value="25">25</option>
+          <option value="60" selected>60</option>
+          <option value="120">120</option>
+          <option value="250">250</option>
+        </select>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          data-contest-load
+        >
+          Load from Platform
+        </button>
+      </div>
+    </div>
+
+    <!--
+      PROVENANCE. This replaces the mock warning for this screen and is equally
+      non-dismissible. It names the source so a screenshot is unambiguous about
+      where the numbers came from.
+    -->
+    <div
+      class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-xs"
+      data-contest-provenance
+    >
+      <span class="inline-flex items-center gap-1.5 font-medium text-emerald-300">
+        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true"></span>
+        Live data
+      </span>
+      <span class="text-slate-400">
+        Read from Dash Platform mainnet over DAPI. Not mock, not cached.
+      </span>
+      <span class="selectable font-mono text-slate-600" title={DPNS_CONTRACT_ID}>
+        {DPNS_CONTRACT_ID.slice(0, 12)}…{DPNS_CONTRACT_ID.slice(-6)}
+      </span>
+    </div>
+
+    <!--
+      The state panel. One element serves as status, progress and error so the
+      page cannot show a spinner and an error at once. It is empty until the
+      operator asks for data, so opening the screen does not silently spend
+      network calls.
+    -->
+    <p class="mt-4 text-xs text-slate-500" data-contest-status>
+      Press <span class="text-slate-300">Load from Platform</span> to read the list. Nothing is
+      fetched until you ask.
+    </p>
+
+    <!-- Progress bar, hidden until a fetch is running. -->
+    <div class="mt-3 hidden" data-contest-progress>
+      <div class="h-1 w-full overflow-hidden rounded-full bg-titan-800">
+        <div class="h-full w-0 bg-titan-400 transition-all" data-contest-bar></div>
+      </div>
+    </div>
+
+    <!-- Summary counters, filled from the real response. -->
+    <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4" data-contest-summary hidden>
+      <div class="rounded-md border border-titan-800 bg-titan-900/60 px-3 py-2.5">
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Loaded</p>
+        <p class="mt-0.5 font-mono text-lg text-slate-100" data-contest-count>—</p>
+      </div>
+      <div class="rounded-md border border-titan-800 bg-titan-900/60 px-3 py-2.5">
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Decided</p>
+        <p class="mt-0.5 font-mono text-lg text-emerald-300" data-contest-decided>—</p>
+      </div>
+      <div class="rounded-md border border-titan-800 bg-titan-900/60 px-3 py-2.5">
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Locked</p>
+        <p class="mt-0.5 font-mono text-lg text-rose-300" data-contest-locked>—</p>
+      </div>
+      <div class="rounded-md border border-titan-800 bg-titan-900/60 px-3 py-2.5">
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Contestants</p>
+        <p class="mt-0.5 font-mono text-lg text-titan-300" data-contest-contestants>—</p>
+      </div>
+    </div>
+
+    <!--
+      The vote-share bar. It shows the ONE number that decides a contest: the
+      balance between votes for a contender, abstentions and votes to lock. A
+      name locks when the lock share wins, which is why lock is rendered in the
+      same visual weight as the winner rather than as a footnote.
+    -->
+    <div class="mt-4 hidden" data-contest-tally>
+      <div class="flex items-baseline justify-between">
+        <p class="text-xs font-medium text-slate-300">
+          Vote split for
+          <span class="selectable font-mono text-slate-100" data-contest-selected>—</span>
+        </p>
+        <p class="font-mono text-xs text-slate-500">
+          <span data-contest-total-votes>—</span> votes cast
+        </p>
+      </div>
+      <div class="mt-2 flex h-2 w-full overflow-hidden rounded-full bg-titan-800" role="img" data-contest-split>
+        <div class="h-full bg-emerald-500" style="width: 0%" data-contest-win-slice></div>
+        <div class="h-full bg-rose-500" style="width: 0%" data-contest-lock-slice></div>
+        <div class="h-full bg-slate-600" style="width: 0%" data-contest-abstain-slice></div>
+      </div>
+      <div class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <span class="inline-flex items-center gap-1.5 text-emerald-300">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
+          <span data-contest-win-label>—</span>
+        </span>
+        <span class="inline-flex items-center gap-1.5 text-rose-300">
+          <span class="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true"></span>
+          <span data-contest-lock-label>—</span>
+        </span>
+        <span class="inline-flex items-center gap-1.5 text-slate-400">
+          <span class="h-1.5 w-1.5 rounded-full bg-slate-600" aria-hidden="true"></span>
+          <span data-contest-abstain-label>—</span>
+        </span>
+      </div>
+    </div>
+
+    <!--
+      The list. Rows are built in the browser from the real response, so the
+      table is empty in the served HTML and this is not a mock table with live
+      numbers painted over it.
+    -->
+    <div class="mt-5 overflow-hidden rounded-lg border border-titan-800">
+      <table class="w-full border-collapse text-left">
+        <caption class="sr-only">Contested DPNS names with their live vote state</caption>
+        <thead>
+          <tr class="border-b border-titan-800 bg-titan-900/60 text-xs tracking-wide text-slate-500 uppercase">
+            <th scope="col" class="px-3 py-2 font-medium">Name</th>
+            <th scope="col" class="px-3 py-2 font-medium">Status</th>
+            <th scope="col" class="px-3 py-2 font-medium">Winner</th>
+            <th scope="col" class="px-3 py-2 text-right font-medium">For</th>
+            <th scope="col" class="px-3 py-2 text-right font-medium">Lock</th>
+            <th scope="col" class="px-3 py-2 text-right font-medium">Abstain</th>
+            <th scope="col" class="px-3 py-2 text-right font-medium">Decided</th>
+          </tr>
+        </thead>
+        <tbody data-contest-rows>
+          <tr data-contest-empty>
+            <td colspan="7" class="px-3 py-8 text-center text-xs text-slate-600">
+              No names loaded yet.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!--
+      The rules, stated on the screen rather than only in a spec. All three are
+      sourced: the window and the regex from the DPNS contract's contested
+      index, and the vote weight from the voting-weight table in Dash Core.
+    -->
+    <div class="mt-6 grid gap-3 sm:grid-cols-3">
+      <div class="rounded-md border border-titan-800 bg-titan-900/40 px-3 py-2.5">
+        <p class="text-xs font-medium text-slate-300">3–19 characters</p>
+        <p class="mt-1 text-xs leading-relaxed text-slate-500">
+          The contested index matches <span class="font-mono text-slate-400">^[a-zA-Z01-]&#123;3,19&#125;$</span>.
+          A 2-character label is decided without a vote, so it never appears here.
+        </p>
+      </div>
+      <div class="rounded-md border border-titan-800 bg-titan-900/40 px-3 py-2.5">
+        <p class="text-xs font-medium text-slate-300">Votes are weighted</p>
+        <p class="mt-1 text-xs leading-relaxed text-slate-500">
+          A Regular node counts 1, an Evo node counts 4. The tallies below are
+          already weighted, so a large number is not necessarily many operators.
+        </p>
+      </div>
+      <div class="rounded-md border border-titan-800 bg-titan-900/40 px-3 py-2.5">
+        <p class="text-xs font-medium text-slate-300">Locked is final</p>
+        <p class="mt-1 text-xs leading-relaxed text-slate-500">
+          If the lock share wins, no identity takes the name and it cannot be
+          registered again. A lock is an outcome, not a failure to decide.
+        </p>
+      </div>
+    </div>
+
+    <!--
+      A secondary, explicitly-disabled action, per the standing rule that an
+      unimplemented action is created disabled rather than omitted. Casting a
+      vote needs a key and a fee, neither of which this build has.
+    -->
+    <div class="mt-5 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        disabled
+        class="cursor-not-allowed rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-500"
+        title="Voting needs an identity key and credits; not wired in this build"
+        data-contest-vote
+      >
+        Cast vote
+      </button>
+      <p class="text-xs text-slate-600">
+        Voting is <span class="text-slate-500">not implemented</span>. Reading contests needs no key;
+        casting a vote needs a Platform identity and credits, which this build does not hold.
+      </p>
+    </div>
+  </div>
+
+  <!--
+    The query runs in the browser, against the real network. It is an inline
+    module because the WASM SDK is a 27 MB dynamic import and must not be part
+    of the page's static payload.
+  -->
+  <script>
+    import { createPlatformClient, describePlatformError } from '../lib/dpns-client';
+    import { fetchContestedNames } from '../lib/dpns';
+    import type { ContestedName, ContestProgress } from '../lib/dpns';
+
+    const $ = <T extends Element = HTMLElement>(sel: string): T | null =>
+      document.querySelector<T>(sel);
+
+    const loadBtn = $<HTMLButtonElement>('[data-contest-load]');
+    const limitSel = $<HTMLSelectElement>('[data-contest-limit]');
+    const statusEl = $('[data-contest-status]');
+    const progressEl = $('[data-contest-progress]');
+    const barEl = $('[data-contest-bar]');
+    const rowsEl = $<HTMLTableSectionElement>('[data-contest-rows]');
+    const summaryEl = $('[data-contest-summary]');
+    const tallyEl = $('[data-contest-tally]');
+
+    /**
+     * The colours are applied through class names that already exist in the
+     * stylesheet. Tailwind's compiler scans source files, so a class built by
+     * string concatenation at runtime is never generated and would render
+     * unstyled — the full class names are written out below for that reason.
+     */
+    const OUTCOME_STYLE: Record<string, { cls: string; label: string }> = {
+      WonByIdentity: { cls: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300', label: 'Won' },
+      Locked: { cls: 'border-rose-500/25 bg-rose-500/10 text-rose-300', label: 'Locked' },
+      NoWinner: { cls: 'border-slate-600/40 bg-slate-600/10 text-slate-400', label: 'No winner' },
+      Unknown: { cls: 'border-amber-500/25 bg-amber-500/10 text-amber-300', label: 'Unknown' },
+    };
+
+    const OUTCOME_FALLBACK = { cls: 'border-amber-500/25 bg-amber-500/10 text-amber-300', label: 'Unknown' };
+
+    const short = (s: string | undefined): string =>
+      s === undefined ? '—' : s.length <= 14 ? s : `${s.slice(0, 7)}…${s.slice(-4)}`;
+
+    const when = (ms: number | undefined): string =>
+      ms === undefined ? '—' : new Date(ms).toISOString().slice(0, 10);
+
+    let rows: ContestedName[] = [];
+    let busy = false;
+
+    function setStatus(text: string, tone: 'muted' | 'error' | 'ok' = 'muted') {
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.className =
+        tone === 'error'
+          ? 'mt-4 text-xs text-rose-300'
+          : tone === 'ok'
+            ? 'mt-4 text-xs text-emerald-300'
+            : 'mt-4 text-xs text-slate-500';
+    }
+
+    function renderProgress(p: ContestProgress) {
+      if (!barEl || !progressEl) return;
+      progressEl.classList.remove('hidden');
+      const total = p.total || 1;
+      const pct = p.phase === 'listing' ? 5 : Math.min(100, Math.round((p.detailed / total) * 100));
+      barEl.style.width = `${pct}%`;
+    }
+
+    function renderSummary() {
+      if (!summaryEl) return;
+      summaryEl.hidden = false;
+      const decided = rows.filter((r) => r.decidedAtMs !== undefined).length;
+      const locked = rows.filter((r) => r.outcome === 'Locked').length;
+      const contestants = rows.reduce((n, r) => n + r.contestants.length, 0);
+      const set = (sel: string, v: string) => {
+        const el = $(sel);
+        if (el) el.textContent = v;
+      };
+      set('[data-contest-count]', String(rows.length));
+      set('[data-contest-decided]', String(decided));
+      set('[data-contest-locked]', String(locked));
+      set('[data-contest-contestants]', String(contestants));
+    }
+
+    /**
+     * The vote split for one name.
+     *
+     * The "for" slice is the winner's own tally when there is a winner, and the
+     * sum of every contender when there is not — which is the honest reading:
+     * with no winner, all those votes went nowhere. Abstain and lock are shown
+     * at the same weight because lock is what beats a contender.
+     */
+    function renderTally(row: ContestedName) {
+      if (!tallyEl) return;
+      tallyEl.classList.remove('hidden');
+
+      const abstain = row.abstainVotes ?? 0;
+      const lock = row.lockVotes ?? 0;
+      const forVotes =
+        row.outcome === 'WonByIdentity'
+          ? (row.contestants.find((c) => c.identityId === row.winnerId)?.voteTally ?? 0)
+          : row.contestants.reduce((n, c) => n + (c.voteTally ?? 0), 0);
+      const total = forVotes + lock + abstain || 1;
+      const pct = (n: number) => `${((n / total) * 100).toFixed(1)}%`;
+
+      const set = (sel: string, v: string) => {
+        const el = $(sel);
+        if (el) el.textContent = v;
+      };
+      const width = (sel: string, v: string) => {
+        const el = $<HTMLElement>(sel);
+        if (el) el.style.width = v;
+      };
+
+      set('[data-contest-selected]', `${row.name}.dash`);
+      set('[data-contest-total-votes]', String(forVotes + lock + abstain));
+      width('[data-contest-win-slice]', pct(forVotes));
+      width('[data-contest-lock-slice]', pct(lock));
+      width('[data-contest-abstain-slice]', pct(abstain));
+      set('[data-contest-win-label]', `For ${forVotes} (${pct(forVotes)})`);
+      set('[data-contest-lock-label]', `Lock ${lock} (${pct(lock)})`);
+      set('[data-contest-abstain-label]', `Abstain ${abstain} (${pct(abstain)})`);
+    }
+
+    function renderRows() {
+      if (!rowsEl) return;
+      rowsEl.textContent = '';
+
+      if (rows.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 7;
+        td.className = 'px-3 py-8 text-center text-xs text-slate-600';
+        td.textContent = 'The network returned no contested names.';
+        tr.append(td);
+        rowsEl.append(tr);
+        return;
+      }
+
+      for (const row of rows) {
+        const style = OUTCOME_STYLE[row.outcome] ?? OUTCOME_FALLBACK;
+        const tr = document.createElement('tr');
+        tr.className = 'cursor-pointer border-b border-titan-800/60 hover:bg-titan-900/50';
+        tr.dataset.contestRow = row.name;
+        tr.tabIndex = 0;
+
+        const cells: Array<[string, string, string?]> = [
+          [`${row.name}.dash`, 'selectable px-3 py-2 font-mono text-xs text-slate-200'],
+          [style.label, `px-3 py-2 text-xs ${style.cls} rounded border inline-block`, 'badge'],
+          [short(row.winnerId), 'selectable px-3 py-2 font-mono text-xs text-slate-500'],
+          [
+            String(row.contestants.reduce((n, c) => n + (c.voteTally ?? 0), 0)),
+            'px-3 py-2 text-right font-mono text-xs text-slate-300',
+          ],
+          [String(row.lockVotes ?? 0), 'px-3 py-2 text-right font-mono text-xs text-rose-300'],
+          [String(row.abstainVotes ?? 0), 'px-3 py-2 text-right font-mono text-xs text-slate-500'],
+          [when(row.decidedAtMs), 'px-3 py-2 text-right font-mono text-xs text-slate-500'],
+        ];
+
+        for (const [text, cls] of cells) {
+          const td = document.createElement('td');
+          // The badge cell wraps its pill in a span so the border does not
+          // stretch the full cell width.
+          if (cls.includes('badge')) {
+            td.className = 'px-3 py-2';
+            const span = document.createElement('span');
+            span.className = cls.replace(' badge', '');
+            span.textContent = text;
+            td.append(span);
+          } else {
+            td.className = cls;
+            td.textContent = text;
+          }
+          if (cls.includes('selectable')) td.title = text;
+          tr.append(td);
+        }
+
+        const select = () => {
+          rowsEl.querySelectorAll('tr').forEach((r) => r.classList.remove('bg-titan-900/60'));
+          tr.classList.add('bg-titan-900/60');
+          renderTally(row);
+        };
+        tr.addEventListener('click', select);
+        tr.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            select();
+          }
+        });
+
+        rowsEl.append(tr);
+      }
+    }
+
+    async function load() {
+      if (busy || !loadBtn) return;
+      busy = true;
+      loadBtn.disabled = true;
+      loadBtn.textContent = 'Loading…';
+      if (summaryEl) summaryEl.hidden = true;
+      if (tallyEl) tallyEl.classList.add('hidden');
+      setStatus('Connecting to Dash Platform…');
+
+      try {
+        const client = await createPlatformClient('mainnet');
+        const limit = Number(limitSel?.value ?? '60');
+        rows = await fetchContestedNames(client, {
+          limit,
+          onProgress: (p) => {
+            renderProgress(p);
+            setStatus(
+              p.phase === 'listing'
+                ? 'Listing contested names…'
+                : `Reading vote state — ${p.detailed} of ${p.total}…`,
+            );
+          },
+        });
+        renderRows();
+        renderProgress({ listed: rows.length, detailed: rows.length, total: rows.length, phase: 'done' });
+        renderSummary();
+        setStatus(`Loaded ${rows.length} contested names from Dash Platform mainnet.`, 'ok');
+      } catch (e) {
+        // The error is surfaced verbatim rather than replaced with a friendly
+        // string: if the failure is a CORS change or a quorum problem, the
+        // operator needs the real message to report it.
+        setStatus(`Could not read from Platform: ${describePlatformError(e)}`, 'error');
+        rows = [];
+        renderRows();
+      } finally {
+        busy = false;
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load from Platform';
+        if (progressEl) progressEl.classList.add('hidden');
+      }
+    }
+
+    loadBtn?.addEventListener('click', () => void load());
+  </script>
+</Layout>

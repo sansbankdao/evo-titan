@@ -32,6 +32,9 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@dashevo/wasm-sdk':
+        specifier: 4.1.1
+        version: 4.1.1
       '@tauri-apps/api':
         specifier: 2.11.1
         version: 2.11.1
@@ -1105,6 +1108,10 @@ packages:
   '@ctrl/tinycolor@4.2.1':
     resolution: {integrity: sha512-Vh5uy9Y1JBMId6J1f68TMXnZrTCvNdo9Fu2k0d1YnJngR+sM5kWTKl441c/3TFs+cG0NWOjRWgQ/iaWhbYx+7A==}
     engines: {node: '>=14'}
+
+  '@dashevo/wasm-sdk@4.1.1':
+    resolution: {integrity: sha512-/be0D7qohZc9fHgYjbtzOg8KOajarzo0NtKCNybv4Z1xeV617Wo0CusnsxCzwbV7C/jDgPJiGel0KtcSTzQcfQ==}
+    engines: {node: '>=18.18'}
 
   '@emmetio/abbreviation@2.3.3':
     resolution: {integrity: sha512-mgv58UrU3rh4YgbE/TzgLQwJ3pFsHHhCLqY20aJq+9comytTXUDNGG/SMtSeMJdkpxgXSXunBGLD8Boka3JyVA==}
@@ -7707,6 +7714,8 @@ snapshots:
       sisteransi: 1.0.5
 
   '@ctrl/tinycolor@4.2.1': {}
+
+  '@dashevo/wasm-sdk@4.1.1': {}
 
   '@emmetio/abbreviation@2.3.3':
     dependencies:

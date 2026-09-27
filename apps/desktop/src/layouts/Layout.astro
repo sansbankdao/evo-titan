@@ -9,9 +9,29 @@ interface Props {
   title: string;
   /** Which sidebar entry is active. */
   active?: string;
+  /**
+   * True for a screen whose content comes from the NETWORK rather than from
+   * mock.ts.
+   *
+   * This exists because the app-level MOCK banner is a blanket claim, and a
+   * blanket claim becomes a false statement the moment one screen shows real
+   * data. On a live screen the banner would say "no node connected" above rows
+   * that were read from a node, and Demo Mode would hide those rows as if they
+   * were invented.
+   *
+   * Setting this:
+   *   - swaps the amber MOCK banner for an emerald LIVE banner,
+   *   - omits `data-demo-content`, so Demo Mode cannot hide real data,
+   *   - omits the "Demo Mode is off" empty state, which claims every screen is
+   *     fabricated and would therefore be wrong here.
+   *
+   * It does NOT weaken the mock banner anywhere else: every other screen keeps
+   * the default and is still hidden when Demo Mode is off.
+   */
+  live?: boolean;
 }
 
-const { title, active } = Astro.props;
+const { title, active, live = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -54,13 +74,33 @@ const { title, active } = Astro.props;
       MOCK DATA BANNER. This session is UI/UX only; nothing on screen comes
       from a node. The banner is deliberately loud and cannot be dismissed, so
       a screenshot can never be mistaken for real fleet data.
+
+      On a LIVE screen the wording changes rather than the banner disappearing.
+      Removing it outright would leave a live screen looking exactly like a
+      mock one, which is the confusion the banner exists to prevent — so the
+      honest form is a banner that says the opposite, in a different colour.
     -->
     <div
-      class="flex shrink-0 items-center justify-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs font-medium text-amber-300"
-      data-notice="mock-data"
+      class:list={[
+        'flex shrink-0 items-center justify-center gap-2 border-b px-4 py-1.5 text-xs font-medium',
+        live
+          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+          : 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+      ]}
+      data-notice={live ? 'live-data' : 'mock-data'}
     >
-      <span class="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true"></span>
-      MOCK DATA — no node connected. All figures are fabricated for UI/UX.
+      <span
+        class:list={[
+          'h-1.5 w-1.5 rounded-full',
+          live ? 'bg-emerald-400' : 'bg-amber-400',
+        ]}
+        aria-hidden="true"
+      ></span>
+      {
+        live
+          ? 'LIVE DATA — this screen reads from Dash Platform mainnet. Other screens are mock.'
+          : 'MOCK DATA — no node connected. All figures are fabricated for UI/UX.'
+      }
     </div>
 
     <div class="flex min-h-0 flex-1">
@@ -73,7 +113,7 @@ const { title, active } = Astro.props;
           off must take the fabrication with it — a blank pane would be
           confusing, an uncleared pane of invented numbers would be dangerous.
         -->
-        <main class="min-h-0 flex-1 overflow-y-auto" data-demo-content>
+        <main class="min-h-0 flex-1 overflow-y-auto" data-demo-content={live ? undefined : ''}>
           <slot />
         </main>
 
@@ -88,6 +128,7 @@ const { title, active } = Astro.props;
         <div
           class="min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 text-center"
           data-when-demo="off"
+          data-when-demo-live={live ? 'hidden' : undefined}
         >
           <div class="max-w-md">
             <p class="text-sm font-semibold tracking-tight text-slate-200">
