@@ -47,6 +47,24 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
           <option value="120">120</option>
           <option value="250">250</option>
         </select>
+        <!--
+          Sort order, defaulting to most recently decided.
+
+          There is deliberately no "newest name" option, because the network
+          publishes no such thing: the contested listing is a list of label
+          strings from an alphabetically ordered index and carries no time at
+          all. The only time available is when a contest was decided, so that
+          is what "most recent" means here and the label says exactly that.
+        -->
+        <label for="contest-sort" class="text-xs text-slate-400">Sort</label>
+        <select
+          id="contest-sort"
+          class="rounded-md border border-titan-800 bg-titan-900 px-2 py-1.5 text-xs text-slate-200"
+          data-contest-sort
+        >
+          <option value="recent" selected>Most recently decided</option>
+          <option value="alpha">Alphabetical</option>
+        </select>
         <button
           type="button"
           class="cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
@@ -248,6 +266,7 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
 
     const loadBtn = $<HTMLButtonElement>('[data-contest-load]');
     const limitSel = $<HTMLSelectElement>('[data-contest-limit]');
+    const sortSel = $<HTMLSelectElement>('[data-contest-sort]');
     const statusEl = $('[data-contest-status]');
     const progressEl = $('[data-contest-progress]');
     const barEl = $('[data-contest-bar]');
@@ -436,8 +455,13 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
       try {
         const client = await createPlatformClient('mainnet');
         const limit = Number(limitSel?.value ?? '60');
+        // Most recently decided is the default. See the note in the header: the
+        // network publishes no creation time for a contested name, so decision
+        // time is the only "recent" that exists.
+        const sortRecentFirst = (sortSel?.value ?? 'recent') === 'recent';
         rows = await fetchContestedNames(client, {
           limit,
+          sortRecentFirst,
           onProgress: (p) => {
             renderProgress(p);
             setStatus(
@@ -450,7 +474,16 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
         renderRows();
         renderProgress({ listed: rows.length, detailed: rows.length, total: rows.length, phase: 'done' });
         renderSummary();
-        setStatus(`Loaded ${rows.length} contested names from Dash Platform mainnet.`, 'ok');
+        // The sort is applied to the loaded set, not to the whole network. The
+        // wording says so, because a list headed "most recent" that is really
+        // "most recent of the first sixty alphabetically" would be a false
+        // claim about the data even though the sort itself is correct.
+        setStatus(
+          sortRecentFirst
+            ? `Loaded ${rows.length} contested names, most recently decided first among those loaded.`
+            : `Loaded ${rows.length} contested names in network index order.`,
+          'ok',
+        );
       } catch (e) {
         // The error is surfaced verbatim rather than replaced with a friendly
         // string: if the failure is a CORS change or a quorum problem, the

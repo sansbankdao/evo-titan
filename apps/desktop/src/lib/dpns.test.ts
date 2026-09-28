@@ -23,6 +23,7 @@ import {
   toContestedName,
   listContestedNames,
   fetchContestedNames,
+  sortByMostRecentlyDecided,
   DPNS_CONTRACT_ID,
   DPNS_CONTESTED_INDEX,
   DPNS_DOCUMENT_TYPE,
@@ -214,7 +215,78 @@ describe('listContestedNames', () => {
   });
 });
 
-describe('fetchContestedNames', () => {
+/**
+ * A decided row with a given decision time, for the ordering tests.
+ *
+ * Built through `toContestedName` rather than by hand so the tests exercise the
+ * same mapping the app uses; a hand-written literal could drift from the real
+ * shape and still pass.
+ */
+function decided(name: string, timeMs: number) {
+  return toContestedName(
+    name,
+    emptyState({
+      winner: { kind: 'WonByIdentity', identityId: id('winner'), block: { timeMs: BigInt(timeMs), height: 1n } },
+    }) as never,
+  );
+}
+
+/** An undecided row: no winner, therefore no decision time at all. */
+function undecided(name: string) {
+  return toContestedName(name, emptyState() as never);
+}
+
+describe('sortByMostRecentlyDecided', () => {
+  test('orders by decision time, newest first', () => {
+    const rows = [decided('a', 1000), decided('b', 3000), decided('c', 2000)];
+    assert.deepEqual(
+      sortByMostRecentlyDecided(rows).map((r) => r.name),
+      ['b', 'c', 'a'],
+    );
+  });
+
+  test('puts undecided rows last rather than inventing a date for them', () => {
+    const rows = [undecided('x'), decided('a', 1000), undecided('y'), decided('b', 2000)];
+    const sorted = sortByMostRecentlyDecided(rows);
+    assert.deepEqual(sorted.map((r) => r.name), ['b', 'a', 'x', 'y']);
+    // And the undecided rows still carry no timestamp afterwards.
+    assert.equal(sorted[2]?.decidedAtMs, undefined);
+    assert.equal(sorted[3]?.decidedAtMs, undefined);
+  });
+
+  test('preserves listing order among undecided rows (stable)', () => {
+    const rows = [undecided('p'), undecided('q'), undecided('r')];
+    assert.deepEqual(
+      sortByMostRecentlyDecided(rows).map((r) => r.name),
+      ['p', 'q', 'r'],
+    );
+  });
+
+  test('preserves listing order among rows decided at the same instant (stable)', () => {
+    const rows = [decided('m', 5000), decided('n', 5000), decided('o', 5000)];
+    assert.deepEqual(
+      sortByMostRecentlyDecided(rows).map((r) => r.name),
+      ['m', 'n', 'o'],
+    );
+  });
+
+  test('does not mutate the input array', () => {
+    const rows = [decided('a', 1000), decided('b', 2000)];
+    const before = rows.map((r) => r.name);
+    sortByMostRecentlyDecided(rows);
+    assert.deepEqual(rows.map((r) => r.name), before);
+  });
+
+  test('an all-undecided set is returned unchanged', () => {
+    const rows = [undecided('a'), undecided('b')];
+    assert.deepEqual(
+      sortByMostRecentlyDecided(rows).map((r) => r.name),
+      ['a', 'b'],
+    );
+  });
+});
+
+describe('fetchContestedNames sorting', () => {
   test('returns one row per name with its vote state', async () => {
     const { client, calls } = fakeClient(['aa', 'bb', 'cc'], { tallies: { aa: 7, bb: 8, cc: 9 } });
     const rows = await fetchContestedNames(client, { limit: 3 });
@@ -264,5 +336,14 @@ describe('fetchContestedNames', () => {
     const rows = await fetchContestedNames(client, { limit: 10 });
     assert.deepEqual(rows, []);
     assert.equal(calls.filter((c) => c.kind === 'state').length, 0);
+  });
+
+  test('sortRecentFirst reorders the fetched rows by decision time', async () => {
+    // The fake client returns names in listing order; the vote state it builds
+    // is undecided for every name, so this asserts the flag is threaded through
+    // to the sort without changing what is fetched.
+    const { client } = fakeClient(['aa', 'bb', 'cc']);
+    const rows = await fetchContestedNames(client, { limit: 3, sortRecentFirst: true });
+    assert.deepEqual(rows.map((r) => r.name), ['aa', 'bb', 'cc']);
   });
 });

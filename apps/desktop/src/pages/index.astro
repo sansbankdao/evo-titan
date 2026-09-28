@@ -111,36 +111,60 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
         </span>
       </div>
 
+      <!--
+        The three arrangements, each a card of the same shape, so they read as
+        one row.
+
+        This previously gave the middle card `p-2 -m-2` plus a border and a
+        tint while its two siblings had no card styling at all. The negative
+        margin pulled it out of its grid cell and the border and tint made that
+        visible, so it appeared to float over the row instead of sitting in it.
+        The fix is not to remove the highlight but to give all three the same
+        box, which is also what the rewards screen already does -- the two
+        screens now present the same three figures the same way.
+
+        The recommendation stays legible as a badge on the shared card rather
+        than as a layout anomaly.
+      -->
       <div class="mt-3 grid gap-3 sm:grid-cols-3">
-        <div data-earn="self-custody">
+        <div
+          data-earn="self-custody"
+          class="rounded-lg border-2 border-emerald-500/40 bg-emerald-500/5 p-3"
+        >
           <div class="flex items-baseline justify-between gap-2">
             <p class="text-xs tracking-wide text-emerald-200 uppercase">Full self-custody</p>
             <p class="font-mono text-3xl font-semibold text-emerald-300">{fees.selfCustodyPercent}%</p>
           </div>
-          <p class="mt-1 font-mono text-xl text-slate-300">{dash4(nodeEarnings.grossPerYear)}</p>
-          <p class="text-xs text-emerald-200/70">
+          <p class="mt-1.5 font-mono text-xl text-slate-300">{dash4(nodeEarnings.grossPerYear)}</p>
+          <p class="mt-1 text-xs text-emerald-200/70">
             {nodeEarnings.selfCustodyApy.toFixed(2)}% on 1,000 DASH — you keep all of it
           </p>
         </div>
-        <!-- The two paid arrangements, both on a 125 DASH share so they are
-             comparable directly. The shared row is the recommendation. -->
-        <div data-earn="shared-pool" class="rounded-md border border-titan-500/25 bg-titan-500/5 p-2 -m-2">
-          <div class="flex items-baseline justify-between gap-2">
+        <!-- Both paid arrangements use a 125 DASH share so they are comparable
+             directly. The shared row is the recommendation. -->
+        <div
+          data-earn="shared-pool"
+          class="rounded-lg border border-titan-500/40 bg-titan-500/5 p-3"
+        >
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
             <p class="text-xs tracking-wide text-titan-200 uppercase">Shared pool · your keys</p>
             <p class="font-mono text-3xl font-semibold text-titan-300">{fees.sharedPoolPercent}%</p>
           </div>
-          <p class="mt-1 font-mono text-xl text-slate-300">{dash4(poolShareEarnings.netPerYear)}</p>
-          <p class="text-xs text-slate-500">
+          <p class="mt-1.5 font-mono text-xl text-slate-300">{dash4(poolShareEarnings.netPerYear)}</p>
+          <p class="mt-1 text-xs text-slate-500">
             {poolShareEarnings.netApy.toFixed(2)}% on a 125 DASH share, after our {fees.sharedPoolPercent}% cut
           </p>
         </div>
-        <div data-earn="custodial">
+        <div
+          data-earn="custodial"
+          class="rounded-lg border border-titan-800 bg-titan-950/40 p-3"
+        >
           <div class="flex items-baseline justify-between gap-2">
             <p class="text-xs tracking-wide text-slate-500 uppercase">Custodial · our keys</p>
             <p class="font-mono text-3xl font-semibold text-titan-300">{fees.custodialPercent}%</p>
           </div>
-          <p class="mt-1 font-mono text-xl text-slate-300">{dash4(shareEarnings.netPerYear)}</p>
-          <p class="text-xs text-slate-500">
+          <p class="mt-1.5 font-mono text-xl text-slate-300">{dash4(shareEarnings.netPerYear)}</p>
+          <p class="mt-1 text-xs text-slate-500">
             {shareEarnings.netApy.toFixed(2)}% on a 125 DASH share, after our {fees.custodialPercent}% cut
           </p>
         </div>

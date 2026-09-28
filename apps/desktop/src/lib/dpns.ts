@@ -140,6 +140,37 @@ export interface FetchContestedOptions {
   onProgress?: (progress: ContestProgress) => void;
   /** Abort signal, so leaving the screen cancels in-flight work. */
   signal?: AbortSignal;
+  /**
+   * Return the most recently decided contests first.
+   *
+   * This is NOT "newest name", because no such thing is published. The
+   * contested listing returns bare label strings taken from the
+   * `parentNameAndLabel` index, which is ordered `normalizedParentDomainName
+   * asc, normalizedLabel asc` (dpns-contract-documents.json) -- alphabetical.
+   * The DPNS `domain` document has no created-at property either, so the
+   * listing carries no time. The only temporal fact available is the vote
+   * state's `winner.block.timeMs`, which is when the contest was DECIDED.
+   *
+   * A per-contender `$createdAt` WOULD be the ideal sort key, since it is when
+   * a name was first contested. It is not reachable from this SDK. Each
+   * contender carries a `serializedDocument`, and `Document.fromBytes` can
+   * decode one to read `createdAt`; but every result type that returns
+   * contenders (`documentsAndVoteTally`, `documents`, `voteTally`) was probed
+   * against mainnet and returned `serializedDocument: undefined` on both the
+   * outer `ContestedResourceContender` and the inner
+   * `ContenderWithSerializedDocument`, whose own type declares the field. So
+   * the document bytes are simply not sent, and this is not a decoding
+   * problem that a different call could fix.
+   *
+   * dash-evo-tool does persist per-contender `created_at` (read from the
+   * deserialized document in `src/context/contested_names_db.rs`
+   * `insert_or_update_contenders`), but it uses the Rust SDK, which receives
+   * the document bytes. We cannot, so we do not pretend to.
+   *
+   * So this sorts by decision time, and undecided contests -- which have no
+   * time -- sort last rather than being given an invented date.
+   */
+  sortRecentFirst?: boolean;
 }
 
 /**
@@ -286,7 +317,7 @@ export async function fetchContestedNames(
   client: PlatformClient,
   options: FetchContestedOptions = {},
 ): Promise<ContestedName[]> {
-  const { limit = 60, onProgress, signal } = options;
+  const { limit = 60, onProgress, signal, sortRecentFirst = false } = options;
   const CHUNK = 8;
 
   onProgress?.({ listed: 0, detailed: 0, total: limit, phase: 'listing' });
@@ -314,5 +345,33 @@ export async function fetchContestedNames(
   }
 
   onProgress?.({ listed: names.length, detailed: out.length, total: names.length, phase: 'done' });
-  return out;
+  return sortRecentFirst ? sortByMostRecentlyDecided(out) : out;
+}
+
+/**
+ * Order rows by when the contest was decided, most recent first.
+ *
+ * Rows with no decision time sort last, and the sort is stable for them so the
+ * listing order the node returned is preserved among undecided contests. A
+ * timestamp is never invented for an undecided name to force it into the
+ * ordering: an undecided contest genuinely has no decision time, and giving it
+ * one would put a made-up date in front of an operator.
+ *
+ * Exported separately from the fetch so the ordering is testable on its own,
+ * without a client, a network or WASM.
+ */
+export function sortByMostRecentlyDecided(rows: ContestedName[]): ContestedName[] {
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      const ta = a.row.decidedAtMs;
+      const tb = b.row.decidedAtMs;
+      // Undecided always sorts after decided, whatever the direction.
+      if (ta === undefined && tb === undefined) return a.index - b.index;
+      if (ta === undefined) return 1;
+      if (tb === undefined) return -1;
+      if (tb !== ta) return tb - ta;
+      return a.index - b.index;
+    })
+    .map(({ row }) => row);
 }
