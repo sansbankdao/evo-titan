@@ -12,7 +12,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check",
-    "test": "node --test src/lib/rpc-core.test.ts src/lib/dpns.test.ts",
+    "test": "node --test src/lib/rpc-core.test.ts src/lib/dpns.test.ts src/lib/cache.test.ts",
     "lint": "eslint .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

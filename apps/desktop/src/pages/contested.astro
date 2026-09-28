@@ -65,6 +65,28 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
           <option value="recent" selected>Most recently decided</option>
           <option value="alpha">Alphabetical</option>
         </select>
+        <!--
+          Serve from the local cache while it is fresh, then refresh in the
+          background. On by default, because the whole point of the cache is
+          that a revisit is instant; it is switchable so the cost of a cold
+          read stays observable.
+        -->
+        <label class="flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
+          <input
+            type="checkbox"
+            checked
+            class="h-3.5 w-3.5 rounded border-titan-700 bg-titan-900 accent-titan-500"
+            data-contest-cache-toggle
+          />
+          Use cache
+        </label>
+        <button
+          type="button"
+          class="rounded-md border border-titan-800 px-2 py-1.5 text-xs text-slate-400 hover:border-rose-500/40 hover:text-rose-300"
+          data-contest-cache-clear
+        >
+          Clear cache
+        </button>
         <button
           type="button"
           class="cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
@@ -89,11 +111,25 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
         Live data
       </span>
       <span class="text-slate-400">
-        Read from Dash Platform mainnet over DAPI. Not mock, not cached.
+        Read from Dash Platform mainnet over DAPI. Not mock. Cached locally after the first read.
       </span>
       <span class="selectable font-mono text-slate-600" title={DPNS_CONTRACT_ID}>
         {DPNS_CONTRACT_ID.slice(0, 12)}…{DPNS_CONTRACT_ID.slice(-6)}
       </span>
+    </div>
+
+    <!--
+      Cache provenance. This is a SEPARATE line from the one above on purpose:
+      "this came from the network" and "this came from disk" are different
+      claims, and a single banner cannot honestly make both. When rows render
+      from the cache this line says so and gives the age.
+    -->
+    <div
+      class="mt-2 hidden items-center gap-2 text-xs"
+      data-contest-cache
+    >
+      <span data-contest-cache-dot class="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" aria-hidden="true"></span>
+      <span class="text-sky-300" data-contest-cache-text></span>
     </div>
 
     <!--
@@ -258,8 +294,10 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
   -->
   <script>
     import { createPlatformClient, describePlatformError } from '../lib/dpns-client';
-    import { fetchContestedNames } from '../lib/dpns';
+    import { fetchContestedNames, sortByMostRecentlyDecided } from '../lib/dpns';
     import type { ContestedName, ContestProgress } from '../lib/dpns';
+    import { describeAge, isCacheFresh } from '../lib/cache';
+    import { readCache, writeCache, clearCache, describeCacheError } from '../lib/cache-store';
 
     const $ = <T extends Element = HTMLElement>(sel: string): T | null =>
       document.querySelector<T>(sel);
@@ -267,6 +305,11 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
     const loadBtn = $<HTMLButtonElement>('[data-contest-load]');
     const limitSel = $<HTMLSelectElement>('[data-contest-limit]');
     const sortSel = $<HTMLSelectElement>('[data-contest-sort]');
+    const cacheToggle = $<HTMLInputElement>('[data-contest-cache-toggle]');
+    const cacheClear = $<HTMLButtonElement>('[data-contest-cache-clear]');
+    const cacheEl = $('[data-contest-cache]');
+    const cacheTextEl = $('[data-contest-cache-text]');
+    const cacheDotEl = $('[data-contest-cache-dot]');
     const statusEl = $('[data-contest-status]');
     const progressEl = $('[data-contest-progress]');
     const barEl = $('[data-contest-bar]');
@@ -289,6 +332,22 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
 
     const OUTCOME_FALLBACK = { cls: 'border-amber-500/25 bg-amber-500/10 text-amber-300', label: 'Unknown' };
 
+    /**
+     * Local debug logging, gated so it is silent unless explicitly enabled.
+     *
+     * Kept because this screen's failure modes (a cache that cannot be opened,
+     * a refresh that fails after a cached render) are invisible in the UI by
+     * design — they are handled, not surfaced. `localStorage.contestDebug`
+     * turns them on without a rebuild.
+     *
+     * Nothing here logs a secret. This path has none, and the rule is absolute:
+     * the RPC password must never be written to a log. If a token ever reaches
+     * this screen, redact it here rather than removing the call site.
+     */
+    function log(msg: string) {
+      if (localStorage.getItem('contestDebug') === '1') console.log('[contested]', msg);
+    }
+
     const short = (s: string | undefined): string =>
       s === undefined ? '—' : s.length <= 14 ? s : `${s.slice(0, 7)}…${s.slice(-4)}`;
 
@@ -297,6 +356,46 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
 
     let rows: ContestedName[] = [];
     let busy = false;
+    // The network the cache is partitioned by. Held as a constant so the cache
+    // key and the platform client cannot drift apart.
+    const NETWORK = 'mainnet' as const;
+
+    /**
+     * Show where the rows on screen came from.
+     *
+     * `fetchedAtMs` is the batch timestamp the rows were written with, or
+     * undefined when the rows came straight from the network on this run. The
+     * wording distinguishes the two, because "from the local cache" and "read
+     * just now" are different claims about how stale the numbers are.
+     */
+    function setCacheNote(fetchedAtMs: number | undefined) {
+      if (!cacheEl || !cacheTextEl || !cacheDotEl) return;
+      if (fetchedAtMs === undefined) {
+        cacheEl.classList.add('hidden');
+        cacheEl.classList.remove('flex');
+        return;
+      }
+      cacheEl.classList.remove('hidden');
+      cacheEl.classList.add('flex');
+      cacheTextEl.textContent = `Served from the local cache — ${describeAge(Date.now() - fetchedAtMs)}. Read from the network on your first load.`;
+      // Sky for cached, so it cannot be mistaken for the emerald "live" badge
+      // above it or the amber mock banner on the other screens.
+      cacheDotEl.className = 'h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400';
+    }
+
+    /**
+     * Apply the selected sort to the rows already in memory and re-render.
+     *
+     * Extracted so a change to the sort control does not re-fetch anything: the
+     * ordering is a view concern, and the data is identical either way. Takes
+     * the raw array and does not mutate it, because `rows` is also what gets
+     * written to the cache and its order must not depend on the view selector.
+     */
+    function applySort() {
+      const recent = (sortSel?.value ?? 'recent') === 'recent';
+      const view = recent ? sortByMostRecentlyDecided(rows) : [...rows];
+      renderRows(view);
+    }
 
     function setStatus(text: string, tone: 'muted' | 'error' | 'ok' = 'muted') {
       if (!statusEl) return;
@@ -373,11 +472,11 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
       set('[data-contest-abstain-label]', `Abstain ${abstain} (${pct(abstain)})`);
     }
 
-    function renderRows() {
+    function renderRows(view: ContestedName[] = rows) {
       if (!rowsEl) return;
       rowsEl.textContent = '';
 
-      if (rows.length === 0) {
+      if (view.length === 0) {
         const tr = document.createElement('tr');
         const td = document.createElement('td');
         td.colSpan = 7;
@@ -388,7 +487,7 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
         return;
       }
 
-      for (const row of rows) {
+      for (const row of view) {
         const style = OUTCOME_STYLE[row.outcome] ?? OUTCOME_FALLBACK;
         const tr = document.createElement('tr');
         tr.className = 'cursor-pointer border-b border-titan-800/60 hover:bg-titan-900/50';
@@ -443,37 +542,111 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
       }
     }
 
+    /**
+     * The network half of a load. Fetches, renders, and writes the result back
+     * to the cache. Never touches the pre-existing rows on failure, so a failed
+     * refresh leaves what is already on screen intact.
+     *
+     * Returns true when it produced rows, so the caller knows whether to
+     * overwrite its own status line.
+     */
+    async function loadFromNetwork(limit: number, sortRecentFirst: boolean): Promise<boolean> {
+      const client = await createPlatformClient(NETWORK);
+      const fetched = await fetchContestedNames(client, {
+        limit,
+        sortRecentFirst,
+        onProgress: (p) => {
+          renderProgress(p);
+          setStatus(
+            p.phase === 'listing'
+              ? 'Listing contested names…'
+              : `Reading vote state — ${p.detailed} of ${p.total}…`,
+          );
+        },
+      });
+      rows = fetched;
+      renderRows();
+      renderProgress({ listed: rows.length, detailed: rows.length, total: rows.length, phase: 'done' });
+      renderSummary();
+
+      // Persist for the next visit. A failure here is not a failure of the
+      // load: the rows are on screen and correct, we simply could not save
+      // them, so it is reported without replacing the success status.
+      try {
+        const written = await writeCache(NETWORK, rows, Date.now());
+        setCacheNote(undefined);
+        log(`cached ${written} rows`);
+      } catch (e) {
+        log(`cache write failed: ${describeCacheError(e)}`);
+      }
+
+      return rows.length > 0;
+    }
+
+    /**
+     * Load contested names, preferring the local cache.
+     *
+     * Stale-while-revalidate, in three steps:
+     *
+     *   1. Read the cache. If it has rows, render them immediately — no
+     *      network, no waiting. This is the case the cache exists for.
+     *   2. If those rows are fresh, stop. Nothing to refresh.
+     *   3. Otherwise refresh from the network, keeping the cached rows on
+     *      screen while it runs so the table never blanks.
+     *
+     * Every cache failure falls through to step 3, so the worst case is the
+     * behaviour before the cache existed.
+     */
     async function load() {
       if (busy || !loadBtn) return;
       busy = true;
       loadBtn.disabled = true;
-      loadBtn.textContent = 'Loading…';
-      if (summaryEl) summaryEl.hidden = true;
-      if (tallyEl) tallyEl.classList.add('hidden');
-      setStatus('Connecting to Dash Platform…');
+      loadBtn.textContent = 'Working…';
+
+      const limit = Number(limitSel?.value ?? '60');
+      const sortRecentFirst = (sortSel?.value ?? 'recent') === 'recent';
+      const useCache = cacheToggle?.checked ?? true;
 
       try {
-        const client = await createPlatformClient('mainnet');
-        const limit = Number(limitSel?.value ?? '60');
-        // Most recently decided is the default. See the note in the header: the
-        // network publishes no creation time for a contested name, so decision
-        // time is the only "recent" that exists.
-        const sortRecentFirst = (sortSel?.value ?? 'recent') === 'recent';
-        rows = await fetchContestedNames(client, {
-          limit,
-          sortRecentFirst,
-          onProgress: (p) => {
-            renderProgress(p);
-            setStatus(
-              p.phase === 'listing'
-                ? 'Listing contested names…'
-                : `Reading vote state — ${p.detailed} of ${p.total}…`,
-            );
-          },
-        });
-        renderRows();
-        renderProgress({ listed: rows.length, detailed: rows.length, total: rows.length, phase: 'done' });
-        renderSummary();
+        // ---- 1. Serve from cache ----
+        let servedFromCache = false;
+        if (useCache) {
+          try {
+            const cached = await readCache(NETWORK);
+            if (cached.rows.length > 0) {
+              rows = cached.names;
+              servedFromCache = true;
+              if (summaryEl) summaryEl.hidden = false;
+              applySort();
+              renderSummary();
+              const ages = cached.rows.map((r) => Number(r.fetchedAtMs)).filter((n) => Number.isFinite(n));
+              const oldest = ages.length > 0 ? Math.min(...ages) : undefined;
+              setCacheNote(oldest);
+              log(`served ${rows.length} rows from cache`);
+
+              // ---- 2. Fresh enough? Stop. ----
+              if (isCacheFresh(cached.rows, Date.now())) {
+                setStatus(`Showing ${rows.length} contested names from the local cache. Still fresh.`, 'ok');
+                return;
+              }
+              // ---- 3. Stale: refresh, leaving the cached rows visible. ----
+              setStatus('Cache is stale — refreshing from Dash Platform…');
+            }
+          } catch (e) {
+            // A cache that cannot be read must not stop a load. Reported, then
+            // ignored; the network path below is unaffected.
+            log(`cache read failed: ${describeCacheError(e)}`);
+          }
+        }
+
+        if (!servedFromCache) {
+          if (summaryEl) summaryEl.hidden = true;
+          if (tallyEl) tallyEl.classList.add('hidden');
+          setStatus('Connecting to Dash Platform…');
+        }
+
+        await loadFromNetwork(limit, sortRecentFirst);
+
         // The sort is applied to the loaded set, not to the whole network. The
         // wording says so, because a list headed "most recent" that is really
         // "most recent of the first sixty alphabetically" would be a false
@@ -487,10 +660,14 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
       } catch (e) {
         // The error is surfaced verbatim rather than replaced with a friendly
         // string: if the failure is a CORS change or a quorum problem, the
-        // operator needs the real message to report it.
+        // operator needs the real message to report it. Rows already on screen
+        // from the cache are deliberately LEFT ALONE: stale data with a visible
+        // warning beats an empty table.
         setStatus(`Could not read from Platform: ${describePlatformError(e)}`, 'error');
-        rows = [];
-        renderRows();
+        if (rows.length === 0) {
+          applySort();
+          if (summaryEl) summaryEl.hidden = true;
+        }
       } finally {
         busy = false;
         loadBtn.disabled = false;
@@ -499,6 +676,39 @@ import { DPNS_CONTRACT_ID } from '../lib/dpns';
       }
     }
 
+    /**
+     * Re-sort and re-render without fetching.
+     *
+     * The status line is rewritten because the previous one described the sort
+     * that was in effect, and leaving it would credit the current ordering to
+     * the wrong rule.
+     */
+    function applySortAndReport() {
+      applySort();
+      if (rows.length === 0) return;
+      const recent = (sortSel?.value ?? 'recent') === 'recent';
+      setStatus(
+        recent
+          ? `${rows.length} contested names, most recently decided first.`
+          : `${rows.length} contested names in network index order.`,
+        'ok',
+      );
+    }
+
+    cacheClear?.addEventListener('click', () => {
+      void (async () => {
+        try {
+          const removed = await clearCache(NETWORK);
+          setCacheNote(undefined);
+          setStatus(`Cleared ${removed} cached rows. The next load will read from the network.`, 'ok');
+          log(`cleared ${removed} cached rows`);
+        } catch (e) {
+          setStatus(`Could not clear the cache: ${describeCacheError(e)}`, 'error');
+        }
+      })();
+    });
+
+    sortSel?.addEventListener('change', applySortAndReport);
     loadBtn?.addEventListener('click', () => void load());
   </script>
 </Layout>

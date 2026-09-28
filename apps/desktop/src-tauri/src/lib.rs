@@ -1,10 +1,17 @@
+mod cache;
 mod menu;
 mod rpc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![rpc::rpc_call])
+    .invoke_handler(tauri::generate_handler![
+      rpc::rpc_call,
+      cache::cache_read_contests,
+      cache::cache_write_contests,
+      cache::cache_clear_contests,
+      cache::cache_stats,
+    ])
     .menu(|app| menu::build(app))
     .on_menu_event(|app, event| {
       // `menu::handle` owns the ids it created. Anything it does not claim is

@@ -28,3 +28,8 @@ tauri-plugin-log = "=2.8.0"
 # Needed because dashd sends no CORS headers and 501s an OPTIONS preflight, so
 # the webview cannot reach the node directly. See src/rpc.rs.
 reqwest = { version = "=0.13.5", default-features = false, features = ["json"] }
+# Local SQLite cache for contested DPNS names. See src/cache.rs for why this is
+# rusqlite rather than tauri-plugin-sql, and why `bundled` is required.
+# `functions` and `fallible_uint` are off: neither is used, and leaving them off
+# keeps the compiled footprint to just SQLite itself.
+rusqlite = { version = "=0.38.0", default-features = false, features = ["bundled"] }
