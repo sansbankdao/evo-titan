@@ -270,3 +270,26 @@ The RPC transport cannot be moved back into the webview, and a fake transport mu
 ## Git identity
 
 Commit as `Sansbank contributors <hello@sansbank.org>`. This is set in **repo-local** config; do not pass inline `-c user.name`/`-c user.email` flags.
+## The dev server and the WASM SDK (a failure that looks like something else)
+
+The contested-names screen reaches `@dashevo/wasm-sdk` **only** through a dynamic `import()`. That has one consequence worth knowing before debugging it.
+
+Vite re-optimizes dependencies whenever the lockfile changes. A re-optimization **wipes `node_modules/.vite/deps`** and re-emits entries under a new hash. If the wasm-sdk was never in the optimizer's entry set, no entry is emitted for it — while the dev-transformed `dpns-client.ts` keeps pointing at the **old** hash. The dev server then answers that URL with **504**, and the browser surfaces the whole thing as:
+
+```
+Importing a module script failed.
+```
+
+That message names neither the module nor the reason, and it looks like a network or CORS failure. It is neither. It is a stale optimizer cache.
+
+Three rules follow:
+
+- `optimizeDeps.include: ['@dashevo/wasm-sdk']` in `apps/desktop/astro.config.mjs` forces an entry to exist regardless of which file is requested first. **Do not remove it**; it is the fix, not a hint.
+- If the symptom returns after a dependency change, `rm -rf node_modules/.vite` and restart. That is the immediate remedy.
+- To confirm the diagnosis rather than assume it: resolve the URL the module actually points at and check its status code. A 504 is this bug; a CORS error is not.
+
+**The production build is unaffected**, because Rolldown follows dynamic imports and code-splits the bundle itself. A green `pnpm build` therefore says nothing about this failure mode — it must be checked against the **dev server**.
+
+### Clicking a freshly loaded page in a headless test
+
+Polling for a button element is **not** sufficient before clicking it. The button is in the served HTML, so it exists before any JavaScript has run; a click at that moment is silently swallowed and the test reports a data failure that is really a race. Wait for the module to execute, then confirm the click changed something, and retry rather than reporting the first no-op as a result.
