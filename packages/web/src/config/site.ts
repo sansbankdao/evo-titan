@@ -588,10 +588,11 @@ export const fees = {
   selfCustodyPercent: 0,
 
   /**
-   * The recommended pool cut, in percent of gross masternode reward. See
-   * `sharedPoolBand` below for the reasoning and the sourced anchor.
+   * The recommended pool cut, in percent of gross masternode reward. 10% per
+   * user decision 2026-10-03, after sourcing hosting costs (see
+   * `sharedPoolBand` below for the reasoning and the sourced anchors).
    */
-  sharedPoolPercent: 15,
+  sharedPoolPercent: 10,
 
   /** Our custodial service fee, in percent of gross masternode reward. */
   custodialPercent: 30,
@@ -664,26 +665,36 @@ export const fees = {
    * the keys and our job is coordination, not custody. Lower than the custodial
    * rate because we take no custody risk.
    *
-   * 15 IS THE RECOMMENDATION, not 10. The reasoning, in order:
+   * 10 IS THE RECOMMENDATION (user decision 2026-10-03). The reasoning, in
+   * order of weight:
    *
-   *   1. The incumbent anchor. CrowdNode charges 20% of rewards for non-custodial
-   *      masternode shares (2025-06-20 capture of
-   *      knowledge.crowdnode.io/en/articles/2225953, pinned in
-   *      `competitorSurvey`). 15% undercuts the only sourced comparable for the
-   *      same trust arrangement, which is the point of a band at all.
-   *   2. 10% is the land-grab price, and it is hard to raise afterwards. A fee
-   *      that has to move upward later is worse for early depositors than one
-   *      that is set honestly at the start, because the second cohort pays less
-   *      than the first. 15% leaves the headroom spent now rather than
-   *      pre-announced.
-   *   3. Compared like-for-like against our own custodial rate, 15% is already
-   *      the aggressive end: it is HALF the 30% we charge when we take the keys.
+   *   1. Midway between the two sourced comparables, with hosting included.
+   *      NodeHub charges 5% of rewards PLUS hosting from $3.90/month (billed
+   *      daily at $0.13, docs.dash.org/en/stable/masternodes/hosting.html,
+   *      read 2026-10-03) — about $26.38 all-in per full node at the model's
+   *      gross. CrowdNode charges 20% of rewards for non-custodial shares
+   *      (2025-06-20 capture pinned in `competitorSurvey`). 10% with hosting
+   *      included sits between them: cheaper than the incumbent, honest about
+   *      not matching a loss-leader.
+   *   2. The fee does not buy servers. Sourced hosting cost is ~0.105 DASH per
+   *      node per month (Dash mainnet is 43.24 GB at block 2,566,300 per
+   *      Blockchair's stats API, so a 100 GB SSD tier suffices; a 4 vCPU /
+   *      8 GB / 100 GB VPS lists at €5.50/month incl. VAT) — about 1.4% of a
+   *      node's monthly reward. 10% covers hosting roughly 7x and funds
+   *      operations, support and development, which is what the fee is really
+   *      for. 5% would leave ~$16/month of margin per node.
+   *   3. The fee is fixed per registration. `protx shared_update_registrar_prepare`
+   *      cannot change `operatorReward`, so a later change affects only NEW
+   *      pools and early depositors keep their rate. That removes the "hard to
+   *      raise later" objection to a lower price — and equally removes the
+   *      excuse to underprice now: every pool assembled while the rate is low
+   *      keeps it for its whole life.
    *
    * What the fee is NOT: it is not a cut of the depositor's own slice, and it is
    * not a per-share charge. `nOperatorReward` is basis points of the whole-node
    * reward, taken at src/masternode/payments.cpp:167 BEFORE the share split at
    * :175. It therefore lands on every depositor in proportion to their
-   * collateral, so a 125 DASH share and a 500 DASH share lose the same 15% of
+   * collateral, so a 125 DASH share and a 500 DASH share lose the same 10% of
    * their own reward. The band exists so that a node assembled differently —
    * fewer participants, more of our own effort — can be priced inside it without
    * re-opening the decision.
@@ -693,9 +704,9 @@ export const fees = {
   sharedPoolBand: {
     lowPercent: 10,
     highPercent: 20,
-    recommendedPercent: 15,
+    recommendedPercent: 10,
     rationale:
-      'Coordination only: we assemble the participant set, run shared_register_prepare and shared_combine, and keep the node updated. We hold no keys and post no collateral of our own, so the rate sits below the custodial one. The band is anchored on the sourced non-custodial comparison — CrowdNode charges 20% of rewards for non-custodial shares (2025-06-20 capture of knowledge.crowdnode.io/en/articles/2225953) — so 10-20% keeps us at or under the incumbent for the same trustless arrangement, while our 30% custodial rate sits under their 35% custodial rate. 15% is recommended over 10% because the only sourced comparable is 20%, because a 10% price is hard to raise later without penalising early depositors, and because 15% is already half of what we charge once we take custody.' },
+      'Coordination only: we assemble the participant set, run shared_register_prepare and shared_combine, and keep the node updated. We hold no keys and post no collateral of our own, so the rate sits below the custodial one. Two sourced comparables bracket it: NodeHub charges 5% of rewards plus hosting from $3.90/month (docs.dash.org masternode hosting page, read 2026-10-03) and CrowdNode charges 20% of rewards for non-custodial shares (2025-06-20 capture of knowledge.crowdnode.io/en/articles/2225953). 10% with hosting included sits midway between them. Hosting itself is cheap and sourced — about 0.105 DASH per node per month at current prices, roughly 1.4% of a node\'s monthly reward — so the fee funds operations and development, not servers. The fee is fixed per registration (shared_update_registrar_prepare cannot change operatorReward), so a later change affects only new pools.' },
 };
 
 /** MOCK roadmap. Nothing here is scheduled or funded. */

@@ -77,19 +77,21 @@ export const yieldModel = {
  *   selfCustodyPercent   0   — the operator holds everything and we charge
  *                              nothing. Titan PRO is an optional subscription,
  *                              not a cut of the reward.
- *   sharedPoolPercent    15  — self-custodial shares; we coordinate only.
+ *   sharedPoolPercent    10  — self-custodial shares; we coordinate only.
  *   custodialPercent     30  — we hold the keys. The only arrangement where we
  *                              take custody risk.
  *
  * In-protocol the fee is CProRegTx.nOperatorReward, in basis points, applied at
  * src/masternode/payments.cpp:167 BEFORE the share split at :175 — so it comes
- * off the whole node, not off each depositor's slice.
+ * off the whole node, not off each depositor's slice. The shared rate is the
+ * user decision of 2026-10-03, set after sourcing hosting costs (raw VPS is
+ * ~1.4% of a node's monthly reward, so the fee funds operations, not servers).
  */
 export const fees = {
   selfCustodyPercent: 0,
-  sharedPoolPercent: 15,
+  sharedPoolPercent: 10,
   custodialPercent: 30,
-  sharedPoolBand: { lowPercent: 10, highPercent: 20, recommendedPercent: 15 },
+  sharedPoolBand: { lowPercent: 10, highPercent: 20, recommendedPercent: 10 },
 } as const;
 
 /** Derived reward figures for one node, at `yieldModel.assumedNodes`. */
@@ -116,8 +118,8 @@ export const nodeEarnings = {
 } as const;
 
 /**
- * The self-custodial shared pool: 15% of the gross node reward, the recommended
- * cut inside `fees.sharedPoolBand`. Separate from `shareEarnings`, which prices
+ * The self-custodial shared pool: 10% of the gross node reward, the recommended
+ * cut inside `fees.sharedPoolBand` (user decision 2026-10-03). Separate from `shareEarnings`, which prices
  * the CUSTODIAL service — conflating the two would put a custody price on a
  * trustless arrangement.
  */
