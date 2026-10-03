@@ -253,6 +253,37 @@ The RPC transport cannot be moved back into the webview, and a fake transport mu
 
 "Cluster" is **not** a Dash protocol term. Marketing copy must not present invented vocabulary as protocol.
 
+## Governance voting (verified from source)
+
+Verified from Dash Core `v24.0.0-rc.1` while reviewing the vote-amplification explainer (corrected internal version: `docs/vote-amplification.md`). These facts govern any pooled-voting or governance copy:
+
+- **A masternode casts one vote per signal per proposal, and the latest vote replaces the earlier one.** `src/governance/object.cpp:878-893` (`CountMatchingVotes`) iterates `mapCurrentMNVotes` keyed by masternode outpoint, holding a **single instance per signal**.
+- **The vote is not "binary" — it is one of three outcomes**: `NONE / YES / NO / ABSTAIN` (`src/governance/vote.h:22-27`). "Indivisible" is the accurate word. Votes are per **signal** — `FUNDING / VALID / DELETE / ENDORSED` (`src/governance/vote.h:32-38`) — not merely per proposal.
+- **Voting weight attaches to the node TYPE, not the deposit**: Regular = 1 vote / 1,000 DASH, Evo = 4 votes / 4,000 DASH (`src/evo/dmn_types.h:33-39`; the `4x` comment sits at `object.cpp:887`). A pooled node's hundred funders still share one vote (or four).
+- **A shared masternode has exactly one voting key**, and consensus requires it to differ from every share's refund and reward payee — `src/evo/providertx.cpp:132` (`IsShareListVotingKeySafe`). Turning a member tally into the node's vote is therefore a **service the pool builds**, never a protocol feature.
+- **"Vote amplification" is a trade-off, never pure upside.** Whoever shows up controls the pooled node's entire vote: low turnout lets a cheap participant steer a 1,000-DASH vote, and silent members' weight flowing to the loudest is exactly what a vote-buyer wants. Any copy must name the capture risk next to the participation benefit.
+- **"Preferences live on Platform where anyone can read them" is a design commitment, not a free property.** It is true only if the pool writes member preferences as Platform documents (identity, contract, credits, UI). Until shipped, the non-custodial verification argument is aspirational and must be labelled as such.
+
+### The CrowdNode voting mechanism is UNVERIFIED
+
+- The claim that CrowdNode offered five member options (Yes / No / Abstain / Delegate / DoNothing) weighted by balance, and that **Delegate is the default for silent members**, is **NOT verified**. The previously pinned Wayback snapshots (`knowledge.crowdnode.io/en/articles/2225953`) cover **fees only**.
+- Verification attempt of 2026-10-03 failed on every route: the knowledge base root returns **404** live, `crowdnode.com` does not connect, the Wayback CDX API answered **429 Too Many Requests** all day (even after 5-minute backoffs), and the availability API has no snapshot for any voting path on either host.
+- Until a voting page is pinned and quoted verbatim, the mechanism is **"described, not verified"** — internal use with that label only; never publish it as fact.
+- The source draft's line *"nothing else in this note depends on that wording"* was **wrong**: the single-member-controls-100%-of-the-vote example depends entirely on the unverified Delegate default. Under a DoNothing default it collapses to the active member's own balance.
+- The draft's "CrowdNode's aggregate results tracked the network-wide vote closely" had **no source** and was dropped in the corrected version.
+
+## The contested-names SQL cache
+
+Shipped in commit `55a0e5d`. The contested screen used to re-read the whole DPNS list on every visit; it now caches in SQLite and serves instantly with stale-while-revalidate.
+
+- **Storage is `rusqlite =0.38.0` with the `bundled` feature** (`apps/desktop/src-tauri/Cargo.toml`) — the exact pair (`rusqlite 0.38.0` / `libsqlite3-sys 0.36.0`) already in the local registry and pinned by dash-evo-tool, so no version was guessed. **`tauri-plugin-sql` was rejected**: it needs a plugin, an npm package and a permission, and it would move SQL into the webview.
+- **Schema is idempotent, not migration-tracked** (`CREATE TABLE IF NOT EXISTS`): one `contested_name` table, PK `(network, name)` so a repeat write updates instead of duplicating and mainnet can never contaminate testnet; contenders are a JSON column (always read and written as a set), mirroring dash-evo-tool's nesting. **WAL + `synchronous=NORMAL`**: the screen reads while the refresh writes, and a rebuildable cache gets nothing from a sync per write. DB file: `contest-cache.sqlite3` in the app data dir.
+- **Same split as RPC/DPNS — the tested code is the shipped code.** `cache.rs` keeps all SQL in plain functions over `&Connection` with four thin `#[tauri]` wrappers (`cache_read_contests`, `cache_write_contests`, `cache_clear_contests`, `cache_stats`) and **12 `cargo test` cases** (round-trip, upsert-not-duplicate, per-network partition, clear-one-leaves-other, empty stats, NULL-vs-zero for undecided rows, camelCase wire shape, reopen persistence). `src/lib/cache.ts` is pure and runs under `node --test` (**24 tests**: null timestamps stay `undefined` and never become 1970; an empty cache is never fresh; corrupt `contestants` JSON loses only tallies, not the row; string int64s become numbers). `src/lib/cache-store.ts` is the only Tauri-touching file, as `dpns-client.ts` is the only WASM-touching one.
+- **Stale-while-revalidate semantics.** `CACHE_TTL_MS = 120_000`; freshness is **oldest-row-based**, so a partial write cannot read as a complete refresh; the batch timestamp is taken **once** per fetch so a slow fetch cannot make its first row look minutes older than its last. A failed network refresh **leaves cached rows on screen** (stale with a visible warning beats an empty table); a cache-write failure is **logged, not surfaced**, and never replaces the load's success status; every cache failure falls through to the network path, so the worst case is pre-cache behaviour.
+- **Cache provenance is a separate line from live provenance** — sky-coloured (`data-contest-cache` family on `contested.astro`), because "this came from the network" and "this came from disk" are different claims one banner cannot honestly make. The screen carries a **"Use cache" checkbox** (default on) and a **"Clear cache" button**. Debug logging is gated behind `localStorage.contestDebug === '1'` and never logs a secret.
+- **The Tauri invoke bridge is verified statically, not by execution.** All four command names match across `cache-store.ts`, `lib.rs` registration and `cache.rs`; argument names (`network`, `rows`) match; both structs carry `#[serde(rename_all = "camelCase")]` and a Rust test asserts the serialized JSON. **No click has round-tripped through the live bridge yet** — the first user "Load from Platform" is the real test.
+- **The WebKit remote inspector is not drivable from this session.** `WEBKIT_INSPECTOR_SERVER=127.0.0.1:9222` opens a listening socket, but it speaks WebKit's raw protocol — no HTTP `/json` endpoint and no WebSocket handshake (python `websocket-client` fails the upgrade), so CDP tooling cannot reach it.
+
 ## Marketing copy constraints
 
 - **Payments are DASH and Dash USDC only.** No third-party processor. Dash USDC is `available: false` until it exists.
