@@ -10,7 +10,7 @@
 //   - shared registration is Regular-node ONLY (providertx.cpp:280 rejects an
 //     Evo node with `bad-protx-shares-evo`)
 import Layout from '../layouts/Layout.astro';
-import { fleet, protocol, short, fees } from '../lib/mock';
+import { fleet, protocol, short, fees, poolShareEarnings } from '../lib/mock';
 
 const shared = fleet.filter((n) => n.shares.length > 0);
 
@@ -18,9 +18,18 @@ const shared = fleet.filter((n) => n.shares.length > 0);
 // glance. Widths are computed from the amounts, not hardcoded.
 const splits = shared.map((node) => {
   const total = node.shares.reduce((sum, s) => sum + s.amount, 0);
+  const signedCount = node.shares.filter((s) => s.signed).length;
+  // Sourced 150 s block time (src/chainparams.cpp:200); 86,400 s per day.
+  const earlyExitDays = node.earlyExit
+    ? (node.earlyExit.periodBlocks * 150) / 86400
+    : undefined;
+  const earlyExitDash = node.earlyExit ? node.earlyExit.penaltyDuffs / 1e8 : undefined;
   return {
     node,
     total,
+    signedCount,
+    earlyExitDays,
+    earlyExitDash,
     parts: node.shares.map((s) => ({
       ...s,
       pct: (s.amount / total) * 100,
@@ -51,7 +60,7 @@ const splits = shared.map((node) => {
 
     <div class="mt-6 space-y-4">
       {
-        splits.map(({ node, total, parts }) => (
+        splits.map(({ node, total, parts, signedCount, earlyExitDays, earlyExitDash }) => (
           <article
             class="overflow-hidden rounded-lg border border-titan-800"
             data-shared-node={node.id}
@@ -71,6 +80,32 @@ const splits = shared.map((node) => {
               <p class="font-mono text-xs text-slate-400">
                 {total.toLocaleString()} / {node.collateralAmount.toLocaleString()} DASH
               </p>
+            </div>
+
+            {/* Pool fill + signature progress. The fill is the reserved amount
+                against the collateral; the signature count is what actually
+                gates the broadcast — no transaction exists until every owner
+                has signed. Both are derived, not hardcoded. */}
+            <div class="border-b border-titan-800 px-4 py-2.5">
+              <div class="flex items-center justify-between text-xs text-slate-400">
+                <span>
+                  {total.toLocaleString()} of {node.collateralAmount.toLocaleString()} DASH reserved
+                </span>
+                <span class="font-mono text-slate-500">
+                  {signedCount} of {node.shares.length} signatures collected
+                </span>
+              </div>
+              <div
+                class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-titan-900"
+                role="img"
+                aria-label="Signature progress"
+                data-signature-progress={node.id}
+              >
+                <div
+                  class="h-full rounded-full bg-emerald-500/80"
+                  style={`width: ${(signedCount / node.shares.length) * 100}%`}
+                />
+              </div>
             </div>
 
             {/* Proportional split bar. */}
@@ -110,12 +145,42 @@ const splits = shared.map((node) => {
                         : 'border-amber-500/25 bg-amber-500/10 text-amber-300',
                     ]}
                     data-signed={part.signed ? 'true' : 'false'}
+                    data-share-stage={part.signed ? 'funding-signed' : 'terms-approved'}
                   >
-                    {part.signed ? 'Signed' : 'Awaiting signature'}
+                    {part.signed
+                      ? part.owner === 'You'
+                        ? 'You — funding signed'
+                        : 'Funding signed'
+                      : 'Terms approved'}
                   </span>
                 </li>
               ))}
             </ul>
+
+            {/* Early-exit terms. Both values are shared_register_prepare
+                arguments verified against the live v24 node; these specific
+                numbers are MOCK. The zero-penalty warning text is the node's
+                own wording from the help output. */}
+            {node.earlyExit && (
+              <div
+                class="border-t border-titan-800 bg-titan-950/60 px-4 py-3 text-xs text-slate-500"
+                data-exit-terms={node.id}
+              >
+                <p class="text-slate-400">Exit terms — fixed at registration</p>
+                <p class="mt-1 leading-relaxed">
+                  Early exit opens after {earlyExitDays} days, for a penalty of {earlyExitDash} DASH
+                  (earlyPeriodBlocks {node.earlyExit.periodBlocks.toLocaleString()} blocks,
+                  {' '}earlyPenalty {node.earlyExit.penaltyDuffs.toLocaleString()} duffs). A zero
+                  penalty means any participant can force an early exit at no cost beyond the
+                  transaction fee — this node charges one instead.
+                </p>
+                <p class="mt-1 leading-relaxed">
+                  Your exit is pre-signed: once the early period ends, a dissolution is already
+                  stored with the refund-key backup and never expires, so an owner can recover
+                  their principal without anyone's cooperation.
+                </p>
+              </div>
+            )}
 
             <div class="border-t border-titan-800 bg-titan-950/60 px-4 py-2 text-xs text-slate-600">
               Shares must total exactly {(node.collateralAmount).toLocaleString()} DASH. Shared
@@ -140,6 +205,22 @@ const splits = shared.map((node) => {
       size it comes off the top before the split, so each owner loses the same percentage of their own
       reward. Full self-custody of a whole node costs {fees.selfCustodyPercent}% — see the
       {' '}<a href="/rewards/" class="text-titan-300 underline decoration-dotted hover:text-titan-200">rewards model</a>.
+    </p>
+
+    {/* Share-of-pool preview: proportional framing, NOT an APY claim. The
+        fraction is the same SplitAmountByShares arithmetic the node uses. */}
+    <p class="mt-3 text-xs leading-relaxed text-slate-500" data-pool-preview>
+      What that means per share: a {poolShareEarnings.deposit} DASH deposit earns
+      {' '}<span class="font-mono text-slate-300">{poolShareEarnings.fraction * 100}% of one node's total rewards</span>,
+      before the {fees.sharedPoolPercent}% fee — keeping about
+      {' '}{poolShareEarnings.netPerYear.toFixed(2)} DASH a year at the model's assumed node count.
+    </p>
+
+    {/* Stage honesty: the lifecycle state above is pre-broadcast. Signed here
+        means a signature has been returned, not that anything exists on chain. */}
+    <p class="mt-3 text-xs leading-relaxed text-slate-500" data-stage-honesty>
+      No coins move yet: signatures above are acknowledgements, and no registration transaction is
+      broadcast until every owner has signed and funding is confirmed.
     </p>
 
     <p class="mt-3 text-xs leading-relaxed text-slate-600">

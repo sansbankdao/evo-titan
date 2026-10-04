@@ -200,6 +200,20 @@ export interface FleetNode {
   region: string;
   /** MOCK. Hosting provider label. */
   provider: string;
+  /**
+   * MOCK early-exit terms, as they would be fixed at registration.
+   *
+   * Both fields are real `shared_register_prepare` arguments verified against
+   * the live v24 node (2026-10-03): `earlyPeriodBlocks` (arg 7, at most
+   * 420,480 blocks = 730 days) and `earlyPenalty` (arg 8, in duffs, must be
+   * below the smallest share, and zero when the period is zero). These VALUES
+   * are invented — the terms are chosen per registration, and the one
+   * registration we ran used the zero-penalty path.
+   *
+   * 17,280 blocks is exactly 30 days at the sourced 150 s block time
+   * (src/chainparams.cpp:200).
+   */
+  earlyExit?: { periodBlocks: number; penaltyDuffs: number };
   /** MOCK. Share holders. Empty for a wholly owned node. */
   shares: Share[];
 }
@@ -261,6 +275,7 @@ export const fleet: FleetNode[] = [
     nextPaymentIn: 254400,
     region: 'us-east',
     provider: 'Self-hosted',
+    earlyExit: { periodBlocks: 17280, penaltyDuffs: 500000000 },
     shares: [
       { owner: 'You', amount: 600, signed: true, keyId: '8a3f...c21e' },
       { owner: 'atlas-node', amount: 300, signed: true, keyId: '4d7b...9f02' },
