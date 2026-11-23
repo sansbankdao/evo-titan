@@ -88,7 +88,10 @@ export const nodeFetchTransport: RpcTransport = async ({ url, user, password, bo
 export const unconfiguredRpc = new DashRpc(
   {
     host: '127.0.0.1',
-    /** TODO: verify against dashd — mainnet RPC port is expected to be 9998. */
+    /**
+     * Mainnet RPC port 9998, sourced: src/chainparamsbase.cpp:42 (v24.0.3) —
+     * testnet 19998, devnet 19798, regtest 19898. Verified 2026-11-23.
+     */
     port: 9998,
     user: '',
     password: '',

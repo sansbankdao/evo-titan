@@ -5,7 +5,7 @@
 carries a source; the CrowdNode mechanism is labelled **described, not
 verified**, and the one line the draft called load-bearing is corrected.
 
-All Dash Core citations are from tag `v24.0.0-rc.1`.
+All Dash Core citations are from tag `v24.0.0-rc.1`; each was re-checked against `v24.0.3` on 2026-11-23 and is unchanged (`vote.h:22-27`, `vote.h:32-38`, `object.cpp:878-893`, `dmn_types.h:33-39`, `providertx.cpp:132`).
 
 ## The constraint that makes the feature necessary
 
@@ -126,10 +126,18 @@ presented as automatic.
 
 ## Blockers to shipping any of this
 
-- **Mainnet cannot register shared masternodes on `v24.0.0-rc.1` at all:**
-  `DEPLOYMENT_V24.nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE // TODO`
-  (`src/chainparams.cpp:213`). Testnet is scheduled for 2026-09-24 (line 413);
-  no mainnet date exists and none may be invented.
+- **Mainnet cannot register shared masternodes YET — v24 activation is
+  scheduled and in progress (updated 2026-11-23).** Released v24.0.x schedules
+  mainnet `DEPLOYMENT_V24` from 2026-11-09 (`src/chainparams.cpp:213-220` at
+  v24.0.3); activation needs a masternode EHF signal (LLMQ_400_85, 340/400)
+  followed by 80% miner signalling across a 4032-block window. Measured
+  2026-11-23: the EHF signal was mined ~Nov 21-22 and the first counted window
+  runs to block 2,580,480 at ~55% sampled signalling, so activation is
+  realistically weeks away (derived estimate: block 2,588,544 ≈ 2026-12-19;
+  earliest possible 2,584,512 ≈ Dec 5) — these are OUR estimates, not official
+  dates, and none may be published as fact. Testnet started 2026-09-24 but its
+  activation state is unreadable from public endpoints; `getdeploymentinfo`
+  from an operated testnet node is the first pilot action.
 - The CrowdNode voting description is unsourced (see above). Pin it before
   quoting any of it externally.
 

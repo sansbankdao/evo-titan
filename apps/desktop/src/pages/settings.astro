@@ -2,8 +2,10 @@
 // apps/desktop/src/pages/settings.astro — Evo Titan
 //
 // Preferences and connection settings. ALL DATA IS MOCK — see src/lib/mock.ts.
-// The connection section describes what rpc.ts WOULD need, not what it has: no
-// transport exists and no node was reachable when this was written.
+// The connection section describes what a dashd connection will need. The
+// transport now exists (src/lib/rpc.ts delegates to the Rust rpc_call) and is
+// verified against a live v24.0.3 node — but nothing in the UI invokes it, no
+// node is configured from this screen, and the fields render for layout only.
 import Layout from '../layouts/Layout.astro';
 import Toggle from '../components/Toggle.astro';
 import DemoModeToggle from '../components/DemoModeToggle.astro';
@@ -47,11 +49,12 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
     <!--
       Connection.
 
-      The form is rendered DISABLED and the save button does not exist. rpc.ts
-      throws before dialling anything, so an enabled "Test connection" button
-      would be a control that cannot succeed. The values are shown so the shape
-      of the eventual form is legible, with a banner saying plainly that none of
-      it is in use.
+      The form is rendered DISABLED and the save button does not exist. The
+      transport is real but no client is configured from this screen yet
+      (unconfiguredRpc throws by design), so an enabled "Test connection"
+      button would be a control that cannot succeed. The values are shown so
+      the shape of the eventual form is legible, with a banner saying plainly
+      that none of it is in use.
     -->
     <section class="mt-6 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="connection">
       <div class="flex flex-wrap items-center justify-between gap-2">

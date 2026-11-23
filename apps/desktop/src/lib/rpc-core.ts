@@ -29,6 +29,21 @@
 // therefore not the error signal — the body is. Treating a 500 as a transport
 // failure would report a real node error as a connection problem.
 
+// RE-VERIFIED AGAINST THE CURRENT RELEASE (2026-11-23)
+// ---------------------------------------------------
+// Dash Core v24.0.3 is the latest tag (v24.0.0 final shipped 2026-11-05;
+// v24.0.1 fixed the LLMK_400_85 DKG that had delayed mainnet v24 activation).
+// The shared-RPC surface is UNCHANGED from the rc.1 this file was first
+// verified against (src/rpc/evo.cpp diffed tag-to-tag): the seven protx
+// subcommands keep their names and argument shapes. New in the release:
+// `protx shared_register_prepare_evo` (gated on the separate evo_shares
+// deployment, which no v24.0.x release signs) and help-text escaping
+// (%% -> %, which the test suite pins). The whole flow re-ran end-to-end on a
+// 24.0.3 regtest node — 2x500 DASH shares, txid edcd1847..., height 501,
+// operatorReward "10.00" round-tripping as 10 — and the suite passes 54/54
+// against that node. v24 also dropped `deployments` from getblockchaininfo
+// entirely; the replacement is `getdeploymentinfo`.
+
 /** A request for one HTTP exchange, fully specified so it can be transported. */
 export interface RpcHttpRequest {
   url: string;

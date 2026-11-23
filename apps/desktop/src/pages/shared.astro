@@ -3,12 +3,17 @@
 //
 // Shared masternode ownership. ALL DATA IS MOCK — see src/lib/mock.ts.
 //
-// The rules shown here are the ones verified from Dash Core v24.0.0-rc.1:
-//   - 2-8 shares           src/evo/providertx.h:134-135
+// The rules shown here are the ones verified from Dash Core v24.0.0-rc.1 and
+// re-verified against the current release, v24.0.3 (2026-11-23):
+//   - 2-8 shares           src/evo/providertx.h:142-143 (rc.1 said 134-135)
 //   - >=100 DASH per share src/evo/providertx.h:58
 //   - shares sum to exactly the collateral
-//   - shared registration is Regular-node ONLY (providertx.cpp:280 rejects an
-//     Evo node with `bad-protx-shares-evo`)
+//   - shared registration is Regular-node ONLY while `evo_shares` is
+//     inactive: v24.0.3 rejects an Evo node with `bad-protx-shares-evo` at
+//     src/evo/specialtxman.cpp:1232 (rc.1 had the hard type check at
+//     providertx.cpp:280). No v24.0.x release signs evo_shares; a later
+//     release (v24.1) is expected to, so this is deployment-gated, not
+//     permanent.
 import Layout from '../layouts/Layout.astro';
 import { fleet, protocol, short, fees, poolShareEarnings } from '../lib/mock';
 

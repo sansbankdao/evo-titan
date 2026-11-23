@@ -28,6 +28,10 @@ export const protocol = {
   minShareAmount: 100,
 } as const;
 
+// Re-verified unchanged against the current release, Dash Core v24.0.3
+// (2026-11-23): MIN/MAX_SHARES now sit at providertx.h:142-143 and MIN_AMOUNT
+// stays at providertx.h:58; the values themselves did not move.
+
 /**
  * The reward model. DERIVED from Dash Core v24.0.0-rc.1 consensus — not read
  * from a node, because there is no node connected (see `rpc.ts`, which throws).
