@@ -43,10 +43,10 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
       getdeploymentinfo from the operator's own node through the verified
       Rust-proxy transport. Every card carries its own status: a failed fetch
       renders an error line where the numbers would be, never a blank card.
-      The Testnet status card is a real read of the public DAPI seed — the one
-      Dash endpoint that answers browser CORS preflights correctly (measured
-      2026-11-23) — so the panel shows testnet platform state with no local
-      node at all.
+      The Network status card is a real read of dapi.sansbank.dev (our own
+      proxy; CORS `*`, measured 2026-11-23) for BOTH networks — including the
+      core chain-locked height the public seed does not expose — with the
+      public testnet seed as a labelled fallback. No local node needed.
     -->
     <div data-live-content>
       <div class="flex flex-wrap items-end justify-between gap-4">
@@ -114,11 +114,13 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
       </div>
 
       <section class="mt-5 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-dapi-card>
-        <h2 class="text-sm font-semibold text-slate-200">Testnet status — public DAPI</h2>
+        <h2 class="text-sm font-semibold text-slate-200">Network status — DAPI</h2>
         <p class="mt-0.5 text-xs text-slate-500">
-          Read live from https://seed-1.testnet.networks.dash.org:1443/ — no local node needed.
+          Read live from dapi.sansbank.dev (our proxy — SDK method names, shapes adapted on our
+          side), with the public testnet seed as fallback. No local node needed.
         </p>
-        <p class="mt-2 font-mono text-xs text-slate-300" data-dapi-status>Reading…</p>
+        <p class="mt-2 font-mono text-xs text-slate-300" data-dapi-testnet>Reading…</p>
+        <p class="mt-1 font-mono text-xs text-slate-400" data-dapi-mainnet>Reading…</p>
       </section>
 
       <div class="mt-6 overflow-hidden rounded-lg border border-titan-800">
@@ -412,6 +414,7 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
   import { toLiveNodeViews, summarizeFleet, type ProtxEntry } from '../lib/fleet-live';
   import { deploymentRows, formatCoreVersion, type DeploymentInfo } from '../lib/deployments';
   import { loadNodeConfig } from '../lib/node-config';
+  import { fetchSansbankStatus, type SansbankStatusView } from '../lib/dapi-sansbank';
 
   const storage = window.localStorage;
   const $ = <T extends Element = HTMLElement>(sel: string): T | null => document.querySelector<T>(sel);
@@ -446,9 +449,55 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
     );
   }
 
-  async function readDapiTestnet(): Promise<void> {
-    const statusEl = $('[data-dapi-status]');
-    if (!statusEl) return;
+  /*
+    The Sansbank proxy reader — the primary source for both networks. The
+    adapter (dapi-sansbank.ts, tested against captured envelopes) does the
+    shape work; this only renders. A failure on testnet falls back to the
+    public seed below, with the source labelled either way — provenance is a
+    separate line from data on purpose (the same rule the contested screen's
+    cache provenance follows).
+  */
+  async function readSansbankStatus(): Promise<void> {
+    const testnetEl = $('[data-dapi-testnet]');
+    const mainnetEl = $('[data-dapi-mainnet]');
+    const transport = async (url: string, body: string): Promise<string> => {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body,
+      });
+      return await res.text();
+    };
+    const render = (el: Element | null, label: string, v: SansbankStatusView): void => {
+      if (!el) return;
+      el.textContent =
+        `${label} — DAPI ${v.dapiVersion} / Drive ${v.driveVersion} · ` +
+        `catching_up: ${String(v.catchingUp)} · platform height ${v.platformHeight.toLocaleString()} · ` +
+        `core chain height ${v.coreChainLockedHeight.toLocaleString()} · ${v.latestBlockHash.slice(0, 8)}… · ` +
+        `via dapi.sansbank.dev`;
+    };
+    try {
+      const t = await fetchSansbankStatus('testnet', transport);
+      render(testnetEl, 'Testnet', t);
+    } catch (e) {
+      if (testnetEl) await readDapiTestnet(testnetEl, (e as Error).message);
+    }
+    try {
+      const m = await fetchSansbankStatus('mainnet', transport);
+      render(mainnetEl, 'Mainnet', m);
+    } catch (e) {
+      if (mainnetEl) {
+        mainnetEl.textContent = `Mainnet — could not read dapi.sansbank.dev: ${(e as Error).message}`;
+      }
+    }
+  }
+
+  /*
+    The public-seed fallback for testnet only (its method surface and shape
+    are the ones measured on 2026-11-23; a mainnet seed endpoint has NOT been
+    verified and is deliberately not called).
+  */
+  async function readDapiTestnet(statusEl: Element, priorError: string): Promise<void> {
     const url = 'https://seed-1.testnet.networks.dash.org:1443/';
     const post = async (method: string): Promise<unknown> => {
       const res = await fetch(url, {
@@ -473,11 +522,11 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
       const v0 = status?.version?.v0;
       const soft = v0?.version?.software;
       statusEl.textContent =
-        `DAPI ${soft?.dapi ?? '?'} / Drive ${soft?.drive ?? '?'} — ` +
-        `catching_up: ${String(v0?.chain?.catching_up ?? '?')} — ` +
-        `best block ${hash.slice(0, 12)}…`;
+        `Testnet — DAPI ${soft?.dapi ?? '?'} / Drive ${soft?.drive ?? '?'} · ` +
+        `catching_up: ${String(v0?.chain?.catching_up ?? '?')} · ` +
+        `best block ${hash.slice(0, 12)}… · via public seed (sansbank proxy: ${priorError})`;
     } catch (e) {
-      statusEl.textContent = `Could not read the public DAPI: ${(e as Error).message}`;
+      statusEl.textContent = `Testnet — could not read either DAPI source: ${(e as Error).message}`;
     }
   }
 
@@ -570,5 +619,5 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
 
   $('[data-live-refresh]')?.addEventListener('click', () => void loadFleet());
   void loadFleet();
-  void readDapiTestnet();
+  void readSansbankStatus();
 </script>

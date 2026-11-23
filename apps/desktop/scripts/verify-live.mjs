@@ -244,10 +244,27 @@ try {
   check('state: live section visible, mock section hidden, empty state hidden', banners.liveSection !== 'none' && banners.mockSection === 'none' && banners.emptyState === 'none', JSON.stringify(banners));
   check('state: status bar names the endpoint, not "connected"', (banners.statusBar ?? '').includes('127.0.0.1:19998'), banners.statusBar);
 
-  // The placeholder 'Reading…' is truthy, so poll until it is GONE — the
-  // DAPI card makes a real network call and needs real time.
-  const dapi = await pollEval(cdp, `(() => { const t = document.querySelector('[data-dapi-status]')?.textContent || ''; return t && !t.includes('Reading') ? t : null; })()`);
-  check('fleet: REAL testnet DAPI read rendered', /DAPI .+ Drive .+ catching_up: false/.test(dapi), dapi);
+  // The placeholder 'Reading…' is truthy, so poll until it is GONE on BOTH
+  // rows — the card makes real network calls (dapi.sansbank.dev first, public
+  // seed as testnet fallback) and needs real time.
+  const dapiT = await pollEval(cdp, `(() => { const t = document.querySelector('[data-dapi-testnet]')?.textContent || ''; return t && !t.includes('Reading') ? t : null; })()`);
+  check(
+    'fleet: REAL testnet DAPI read rendered with a labelled source',
+    /Testnet — DAPI .+ Drive .+ catching_up: false .+ via (dapi\.sansbank\.dev|public seed)/.test(dapiT),
+    dapiT,
+  );
+  const coreHeight = (m) => /core chain height ([0-9,]+)/.exec(m)?.[1]?.replace(/,/g, '');
+  check(
+    'fleet: sansbank source surfaces the core chain-locked height',
+    dapiT.includes('via dapi.sansbank.dev') && Number(coreHeight(dapiT) ?? 0) > 1590000,
+    dapiT,
+  );
+  const dapiM = await pollEval(cdp, `(() => { const t = document.querySelector('[data-dapi-mainnet]')?.textContent || ''; return t && !t.includes('Reading') ? t : null; })()`);
+  check(
+    'fleet: REAL mainnet DAPI read via sansbank',
+    /Mainnet — DAPI .+ core chain height [0-9,]+ .+ via dapi\.sansbank\.dev/.test(dapiM),
+    dapiM,
+  );
 
   // ----- /shared/ — the live share table -----
   console.log('\n== /shared/ (live mode) ==');
