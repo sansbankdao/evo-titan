@@ -34,8 +34,117 @@ const healthOrder = { enabled: 0, posing: 1, expired: 2, down: 3 };
 const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.health]);
 ---
 
-<Layout title="Fleet" active="fleet">
+<Layout title="Fleet" active="fleet" nodeLive>
   <div class="mx-auto w-full max-w-6xl px-6 py-6">
+    <!--
+      LIVE FLEET (Phase 1). Shown when Demo Mode is off AND a node is
+      configured (global.css keys this off data-node='configured'); reads
+      `protx list wallet`, getblockchaininfo, getnetworkinfo and
+      getdeploymentinfo from the operator's own node through the verified
+      Rust-proxy transport. Every card carries its own status: a failed fetch
+      renders an error line where the numbers would be, never a blank card.
+      The Testnet status card is a real read of the public DAPI seed — the one
+      Dash endpoint that answers browser CORS preflights correctly (measured
+      2026-11-23) — so the panel shows testnet platform state with no local
+      node at all.
+    -->
+    <div data-live-content>
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-white">Fleet</h1>
+          <p class="mt-1 text-sm text-slate-400" data-live-summary>Reading from your node…</p>
+        </div>
+        <button
+          type="button"
+          data-live-refresh
+          class="cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Nodes (wallet)</p>
+          <p class="mt-1.5 font-mono text-lg text-slate-100" data-live-total>—</p>
+        </div>
+        <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Collateral</p>
+          <p class="mt-1.5 font-mono text-lg text-slate-100" data-live-collateral>—</p>
+        </div>
+        <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">Shares on chain</p>
+          <p class="mt-1.5 font-mono text-lg text-slate-100" data-live-shares>—</p>
+        </div>
+        <div class="rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+          <p class="text-xs tracking-wide text-slate-500 uppercase">PoSe-banned</p>
+          <p class="mt-1.5 font-mono text-lg text-slate-100" data-live-pose>—</p>
+        </div>
+      </div>
+
+      <div class="mt-5 grid gap-3 lg:grid-cols-2">
+        <section class="rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-node-info>
+          <h2 class="text-sm font-semibold text-slate-200">Connected node</h2>
+          <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            <div class="flex justify-between gap-2">
+              <dt class="text-slate-500">Chain</dt>
+              <dd class="font-mono text-slate-300" data-node-chain>—</dd>
+            </div>
+            <div class="flex justify-between gap-2">
+              <dt class="text-slate-500">Height</dt>
+              <dd class="font-mono text-slate-300" data-node-height>—</dd>
+            </div>
+            <div class="flex justify-between gap-2">
+              <dt class="text-slate-500">Dash Core</dt>
+              <dd class="font-mono text-slate-300" data-node-version>—</dd>
+            </div>
+            <div class="flex justify-between gap-2">
+              <dt class="text-slate-500">Endpoint</dt>
+              <dd class="font-mono text-slate-300" data-node-endpoint>—</dd>
+            </div>
+          </dl>
+          <p class="mt-2 text-xs text-slate-600" data-node-error></p>
+        </section>
+
+        <section class="rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-deploy-card>
+          <h2 class="text-sm font-semibold text-slate-200">Consensus deployments</h2>
+          <p class="mt-0.5 text-xs text-slate-500">getdeploymentinfo — the v24 method; v24/evo_shares first.</p>
+          <div class="mt-2 max-h-48 overflow-y-auto" data-deploy-rows></div>
+        </section>
+      </div>
+
+      <section class="mt-5 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-dapi-card>
+        <h2 class="text-sm font-semibold text-slate-200">Testnet status — public DAPI</h2>
+        <p class="mt-0.5 text-xs text-slate-500">
+          Read live from https://seed-1.testnet.networks.dash.org:1443/ — no local node needed.
+        </p>
+        <p class="mt-2 font-mono text-xs text-slate-300" data-dapi-status>Reading…</p>
+      </section>
+
+      <div class="mt-6 overflow-hidden rounded-lg border border-titan-800">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-titan-900/80 text-xs tracking-wide text-slate-500 uppercase">
+            <tr>
+              <th scope="col" class="px-4 py-2.5 font-medium">ProTx</th>
+              <th scope="col" class="px-4 py-2.5 font-medium">Type</th>
+              <th scope="col" class="px-4 py-2.5 font-medium">Status</th>
+              <th scope="col" class="px-4 py-2.5 font-medium">Collateral</th>
+              <th scope="col" class="px-4 py-2.5 font-medium">Operator cut</th>
+              <th scope="col" class="px-4 py-2.5 font-medium">Registered</th>
+              <th scope="col" class="px-4 py-2.5 font-medium">Shares</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-titan-800" data-live-fleet></tbody>
+        </table>
+        <p class="hidden border-t border-titan-800 bg-titan-950/60 px-4 py-3 text-xs text-rose-300" data-fleet-error></p>
+      </div>
+    </div>
+
+    <!--
+      THE MOCK FLEET. Everything from here down is the fabricated page from
+      src/lib/mock.ts, unchanged, shown in Demo Mode.
+    -->
+    <div data-demo-content>
     <!-- Header -->
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -289,5 +398,177 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
         }
       </ul>
     </div>
+    </div>
   </div>
 </Layout>
+
+<script>
+  // The live fleet. All data flows through the tested pure modules; this script
+  // only moves DOM. `protx list wallet` needs the node's wallet loaded — a
+  // wallet-disabled node answers -1 "not supported when wallet is disabled",
+  // which is rendered as the table's error line, not as an empty table.
+  import { liveRpc } from '../lib/live-rpc';
+  import { RpcError } from '../lib/rpc';
+  import { toLiveNodeViews, summarizeFleet, type ProtxEntry } from '../lib/fleet-live';
+  import { deploymentRows, formatCoreVersion, type DeploymentInfo } from '../lib/deployments';
+  import { loadNodeConfig } from '../lib/node-config';
+
+  const storage = window.localStorage;
+  const $ = <T extends Element = HTMLElement>(sel: string): T | null => document.querySelector<T>(sel);
+
+  function setErr(sel: string, message: string): void {
+    const el = $(sel);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.remove('hidden');
+  }
+
+  function renderDeployments(dep: DeploymentInfo): void {
+    const box = $('[data-deploy-rows]');
+    if (!box) return;
+    box.replaceChildren(
+      ...deploymentRows(dep).map((r) => {
+        const row = document.createElement('p');
+        row.className = 'flex items-center justify-between gap-2 py-0.5 font-mono text-xs';
+        const left = document.createElement('span');
+        left.className = r.active ? 'text-slate-300' : 'text-slate-500';
+        left.textContent = `${r.id}${r.ehf ? ' (EHF)' : ''}`;
+        const right = document.createElement('span');
+        right.className = r.active
+          ? 'text-emerald-400/90'
+          : r.status === 'started' || r.status === 'locked_in'
+            ? 'text-titan-300'
+            : 'text-slate-500';
+        right.textContent = r.active ? `active since ${r.since}` : r.status;
+        row.append(left, right);
+        return row;
+      }),
+    );
+  }
+
+  async function readDapiTestnet(): Promise<void> {
+    const statusEl = $('[data-dapi-status]');
+    if (!statusEl) return;
+    const url = 'https://seed-1.testnet.networks.dash.org:1443/';
+    const post = async (method: string): Promise<unknown> => {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ method, id: 'evo-titan', jsonrpc: '2.0', params: {} }),
+      });
+      const json = (await res.json()) as { result?: unknown; error?: { message: string } };
+      if (json.error) throw new Error(json.error.message);
+      return json.result;
+    };
+    try {
+      const hash = (await post('getBestBlockHash')) as string;
+      const status = (await post('getStatus')) as {
+        version?: {
+          v0?: {
+            version?: { software?: { dapi?: string; drive?: string } };
+            chain?: { catching_up?: boolean };
+          };
+        };
+      };
+      const v0 = status?.version?.v0;
+      const soft = v0?.version?.software;
+      statusEl.textContent =
+        `DAPI ${soft?.dapi ?? '?'} / Drive ${soft?.drive ?? '?'} — ` +
+        `catching_up: ${String(v0?.chain?.catching_up ?? '?')} — ` +
+        `best block ${hash.slice(0, 12)}…`;
+    } catch (e) {
+      statusEl.textContent = `Could not read the public DAPI: ${(e as Error).message}`;
+    }
+  }
+
+  async function loadFleet(): Promise<void> {
+    const client = liveRpc(storage);
+    const cfg = loadNodeConfig(storage);
+    const endpointEl = $('[data-node-endpoint]');
+    if (endpointEl && cfg) endpointEl.textContent = `${cfg.host}:${cfg.port}`;
+    if (!client) {
+      setErr('[data-node-error]', 'No node configured — nothing was read.');
+      return;
+    }
+    const summaryEl = $('[data-live-summary]');
+    if (summaryEl) summaryEl.textContent = 'Reading from your node…';
+    try {
+      const chain = await client.call<{ chain: string; blocks: number }>('getblockchaininfo');
+      const net = await client.call<{ version: number; subversion: string }>('getnetworkinfo');
+      const dep = await client.call<DeploymentInfo>('getdeploymentinfo');
+      const entries = (await client.listMasternodes('wallet', true)) as ProtxEntry[];
+      const views = toLiveNodeViews(entries);
+      const sum = summarizeFleet(entries);
+
+      const set = (sel: string, text: string): void => {
+        const el = $(sel);
+        if (el) el.textContent = text;
+      };
+      set('[data-live-total]', String(sum.total));
+      set('[data-live-collateral]', `${sum.totalCollateralDash.toLocaleString()} DASH`);
+      set('[data-live-shares]', String(sum.sharesOnChain));
+      set('[data-live-pose]', String(sum.poseBanned));
+      set('[data-node-chain]', chain.chain);
+      set('[data-node-height]', chain.blocks.toLocaleString());
+      set('[data-node-version]', `${formatCoreVersion(net.version)} (${net.subversion})`);
+      renderDeployments(dep);
+      if (summaryEl) {
+        summaryEl.textContent =
+          `${sum.total} node${sum.total === 1 ? '' : 's'} in this wallet · ` +
+          `${sum.shared} shared · ${sum.evos} evo`;
+      }
+
+      const tbody = $('[data-live-fleet]');
+      if (tbody) {
+        const healthLabel: Record<string, string> = {
+          enabled: 'Enabled',
+          banned: 'PoSe-banned',
+          revoked: 'Revoked',
+        };
+        const healthClass: Record<string, string> = {
+          enabled: 'text-emerald-300',
+          banned: 'text-amber-400',
+          revoked: 'text-rose-400',
+        };
+        tbody.replaceChildren(
+          ...views.map((v) => {
+            const tr = document.createElement('tr');
+            tr.className = 'bg-titan-950/40 hover:bg-titan-900/40';
+            tr.setAttribute('data-live-node', v.proTxHash);
+            const cells: Array<[string, string]> = [
+              ['px-4 py-3', v.shortProTx],
+              ['px-4 py-3 font-mono text-xs text-slate-300', v.kind === 'evo' ? 'Evo' : 'Regular'],
+              [`px-4 py-3 font-mono text-xs ${healthClass[v.health]}`, healthLabel[v.health]],
+              ['px-4 py-3 font-mono text-xs text-slate-300', `${(v.collateralDuffs / 1e8).toLocaleString()} DASH`],
+              ['px-4 py-3 font-mono text-xs text-slate-300', `${v.operatorRewardPercent}%`],
+              ['px-4 py-3 font-mono text-xs text-slate-400', v.registeredHeight.toLocaleString()],
+              ['px-4 py-3 font-mono text-xs text-slate-300', v.shares.length > 0 ? String(v.shares.length) : '—'],
+            ];
+            cells.forEach(([cls, text], i) => {
+              const td = document.createElement('td');
+              td.className = cls;
+              if (i === 0) {
+                td.title = v.proTxHash;
+                td.classList.add('selectable');
+              }
+              td.textContent = text;
+              tr.append(td);
+            });
+            return tr;
+          }),
+        );
+      }
+      const errEl = $('[data-fleet-error]');
+      errEl?.classList.add('hidden');
+    } catch (e) {
+      const msg = e instanceof RpcError ? e.message : String(e);
+      if (summaryEl) summaryEl.textContent = 'The node could not be read.';
+      setErr('[data-node-error]', msg);
+      setErr('[data-fleet-error]', msg);
+    }
+  }
+
+  $('[data-live-refresh]')?.addEventListener('click', () => void loadFleet());
+  void loadFleet();
+  void readDapiTestnet();
+</script>

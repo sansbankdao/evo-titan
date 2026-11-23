@@ -43,8 +43,49 @@ const splits = shared.map((node) => {
 });
 ---
 
-<Layout title="Shared Masternodes" active="shared">
+<Layout title="Shared Masternodes" active="shared" nodeLive>
   <div class="mx-auto w-full max-w-6xl px-6 py-6">
+    <!--
+      LIVE SHARED NODES (Phase 1). Shown when Demo Mode is off AND a node is
+      configured; reads `protx list wallet` and renders every node whose
+      state carries an on-chain share table (version 3 registrations). These
+      are REGISTERED nodes — the share table below is the consensus record,
+      not a signature-collection progress bar; pre-broadcast assembly is the
+      Phase 2 product and does not exist on chain.
+    -->
+    <div data-live-content>
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-white">Shared Masternodes</h1>
+          <p class="mt-1 text-sm text-slate-400" data-shared-summary>Reading from your node…</p>
+        </div>
+        <button
+          type="button"
+          data-shared-refresh
+          class="cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div class="mt-6 space-y-4" data-shared-nodes></div>
+      <p class="hidden mt-4 text-xs text-rose-300" data-shared-error></p>
+
+      <p class="mt-6 text-xs leading-relaxed text-slate-500">
+        This is the <span class="text-slate-300">self-custodial</span> pool: every share above pays its
+        own reward script and we never hold a key. Our recommended cut is
+        {' '}<span class="font-mono text-titan-300">{fees.sharedPoolPercent}%</span> of the gross node reward
+        ({fees.sharedPoolBand.lowPercent}–{fees.sharedPoolBand.highPercent}% band), taken off the whole node
+        before the split, so every share loses the same percentage of its own reward. The fee
+        is fixed per registration — an operator cut cannot be changed after the fact.
+      </p>
+    </div>
+
+    <!--
+      THE MOCK PAGE. The fabricated shared fleet from src/lib/mock.ts,
+      unchanged, shown in Demo Mode.
+    -->
+    <div data-demo-content>
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-xl font-semibold tracking-tight text-white">Shared Masternodes</h1>
@@ -232,5 +273,127 @@ const splits = shared.map((node) => {
       MOCK DATA. The share rules above are Dash Core v24 consensus and sourced; the owners,
       amounts and keys are invented. The fee is a recommendation and nothing charges it yet.
     </p>
+    </div>
   </div>
 </Layout>
+
+<script>
+  // The live shared view. Pure mapping lives in fleet-live.ts (tested); this
+  // script reads `protx list wallet`, keeps the entries with an on-chain share
+  // table, and renders one card per node with the consensus-record facts.
+  import { liveRpc } from '../lib/live-rpc';
+  import { RpcError } from '../lib/rpc';
+  import { toLiveNodeViews, duffsToDash, type ProtxEntry } from '../lib/fleet-live';
+
+  const storage = window.localStorage;
+  const $ = <T extends Element = HTMLElement>(sel: string): T | null => document.querySelector<T>(sel);
+
+  const BLOCK_SECONDS = 150; // sourced: src/chainparams.cpp:200 (v24.0.3)
+
+  async function loadShared(): Promise<void> {
+    const client = liveRpc(storage);
+    const summary = $('[data-shared-summary]');
+    const box = $('[data-shared-nodes]');
+    const errEl = $('[data-shared-error]');
+    if (!client || !box) {
+      if (summary) summary.textContent = 'No node configured.';
+      return;
+    }
+    try {
+      const entries = (await client.listMasternodes('wallet', true)) as ProtxEntry[];
+      const shared = toLiveNodeViews(entries).filter((v) => v.shares.length > 0);
+      if (summary) {
+        summary.textContent =
+          shared.length === 0
+            ? 'No shared masternodes in this wallet yet.'
+            : `${shared.length} shared node${shared.length === 1 ? '' : 's'} · ` +
+              `${shared.reduce((n, v) => n + v.shares.length, 0)} shares on chain`;
+      }
+      errEl?.classList.add('hidden');
+      box.replaceChildren(
+        ...shared.map((v) => {
+          const card = document.createElement('article');
+          card.className = 'overflow-hidden rounded-lg border border-titan-800';
+          card.setAttribute('data-live-shared-node', v.proTxHash);
+
+          const head = document.createElement('div');
+          head.className =
+            'flex flex-wrap items-center justify-between gap-3 border-b border-titan-800 bg-titan-900/60 px-4 py-3';
+          const headLeft = document.createElement('div');
+          const hash = document.createElement('p');
+          hash.className = 'selectable font-mono text-xs text-slate-500';
+          hash.title = v.proTxHash;
+          hash.textContent = v.shortProTx;
+          const meta = document.createElement('p');
+          meta.className = 'mt-0.5 font-mono text-xs text-slate-600';
+          meta.textContent =
+            `registered at height ${v.registeredHeight.toLocaleString()} · ` +
+            `operator cut ${v.operatorRewardPercent}%`;
+          headLeft.append(hash, meta);
+          const headRight = document.createElement('p');
+          headRight.className = 'font-mono text-xs text-slate-400';
+          headRight.textContent =
+            v.health === 'banned'
+              ? 'PoSe-banned — no service proofs'
+              : v.health === 'revoked'
+                ? 'Revoked'
+                : 'Enabled';
+          headRight.classList.add(
+            v.health === 'enabled' ? 'text-emerald-300' : v.health === 'revoked' ? 'text-rose-400' : 'text-amber-400',
+          );
+          head.append(headLeft, headRight);
+          card.append(head);
+
+          const totalDuffs = v.shares.reduce((sum, s) => sum + s.amountDash, 0);
+          const list = document.createElement('ul');
+          list.className = 'divide-y divide-titan-800';
+          list.setAttribute('role', 'list');
+          for (const s of v.shares) {
+            const li = document.createElement('li');
+            li.className = 'flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-xs';
+            const pct = totalDuffs > 0 ? (s.amountDash / totalDuffs) * 100 : 0;
+            const cells: Array<[string, string, string?]> = [
+              ['font-mono text-slate-300', `${s.amountDash.toLocaleString()} DASH`],
+              ['font-mono text-slate-600', `${pct.toFixed(1)}%`],
+              ['selectable font-mono text-slate-600', `refund ${s.refundAddress}`, s.refundAddress],
+              ['selectable font-mono text-slate-600', `reward ${s.rewardAddress}`, s.rewardAddress],
+              ['selectable font-mono text-slate-600', `owner ${s.ownerAddress}`, s.ownerAddress],
+            ];
+            for (const [cls, text, title] of cells) {
+              const span = document.createElement('span');
+              span.className = cls;
+              if (title) span.title = title;
+              span.textContent = text;
+              li.append(span);
+            }
+            list.append(li);
+          }
+          card.append(list);
+
+          if (v.earlyExit) {
+            const exit = document.createElement('div');
+            exit.className = 'border-t border-titan-800 bg-titan-950/60 px-4 py-3 text-xs text-slate-500';
+            const days = (v.earlyExit.periodBlocks * BLOCK_SECONDS) / 86400;
+            exit.textContent =
+              `Exit terms — fixed at registration: early exit after ${days.toLocaleString()} days ` +
+              `(earlyPeriodBlocks ${v.earlyExit.periodBlocks.toLocaleString()}), penalty ` +
+              `${duffsToDash(v.earlyExit.penaltyDuffs)} DASH. A zero penalty would mean any ` +
+              `participant can force an early exit at no cost beyond the fee; this one charges one.`;
+            card.append(exit);
+          }
+          return card;
+        }),
+      );
+    } catch (e) {
+      const msg = e instanceof RpcError ? e.message : String(e);
+      if (summary) summary.textContent = 'The node could not be read.';
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.classList.remove('hidden');
+      }
+    }
+  }
+
+  $('[data-shared-refresh]')?.addEventListener('click', () => void loadShared());
+  void loadShared();
+</script>

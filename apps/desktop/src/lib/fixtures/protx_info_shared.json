@@ -1,0 +1,60 @@
+{
+  "type": "Regular",
+  "proTxHash": "edcd184777b90367f64273acb5696f317e835104883ab20dc49555bdcd41758d",
+  "collateralHash": "edcd184777b90367f64273acb5696f317e835104883ab20dc49555bdcd41758d",
+  "collateralIndex": 1,
+  "operatorReward": 10,
+  "state": {
+    "version": 3,
+    "addresses": {},
+    "registeredHeight": 501,
+    "lastPaidHeight": 0,
+    "consecutivePayments": 0,
+    "PoSePenalty": 0,
+    "PoSeRevivedHeight": -1,
+    "PoSeBanHeight": 501,
+    "revocationReason": 0,
+    "votingAddress": "yWF2XchkisxafNg9Y1rTsznosc4BmGyCPS",
+    "shares": [
+      {
+        "amount": 50000000000,
+        "refundAddress": "yUH4mSYrFB8wVNHkH3Y9NSHjfY1924EyNz",
+        "refundScript": "76a914574dbdbb44e3854d32dabd41242ef429787934d388ac",
+        "rewardAddress": "yUH4mSYrFB8wVNHkH3Y9NSHjfY1924EyNz",
+        "rewardScript": "76a914574dbdbb44e3854d32dabd41242ef429787934d388ac",
+        "ownerAddress": "yhJp8asfaNrEhjs2WUrLNLqWMJMbmpFYQ9"
+      },
+      {
+        "amount": 50000000000,
+        "refundAddress": "yWd11YGCV5RwnLyr8dz2LmjgfAHykrdvRo",
+        "refundScript": "76a91471032d029dc603ce3e8aa8f8880edbc8d02591ee88ac",
+        "rewardAddress": "yWd11YGCV5RwnLyr8dz2LmjgfAHykrdvRo",
+        "rewardScript": "76a91471032d029dc603ce3e8aa8f8880edbc8d02591ee88ac",
+        "ownerAddress": "yVSj6nzwfASTqEnvvHLxqQF6fBwQNzJE82"
+      }
+    ],
+    "earlyPeriodBlocks": 10000,
+    "earlyPenalty": 1000000000,
+    "pubKeyOperator": "a6626baadd06ba6cbfe1cc43c19fd3b32c3ed83bb28ccf6625f9e4898c5e909b6314305a09bc0455da339cc87a68b84c"
+  },
+  "confirmations": 1,
+  "wallet": {
+    "hasOwnerKey": true,
+    "hasOperatorKey": false,
+    "hasVotingKey": true,
+    "ownsCollateral": false,
+    "ownsPayeeScript": true,
+    "ownsOperatorRewardScript": false
+  },
+  "metaInfo": {
+    "lastDSQ": 0,
+    "mixingTxCount": 0,
+    "outboundAttemptCount": 0,
+    "lastOutboundAttempt": 0,
+    "lastOutboundAttemptElapsed": 1795470723,
+    "lastOutboundSuccess": 0,
+    "lastOutboundSuccessElapsed": 1795470723,
+    "is_platform_banned": false,
+    "platform_ban_height_updated": 0
+  }
+}

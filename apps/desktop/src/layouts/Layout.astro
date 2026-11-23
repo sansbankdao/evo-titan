@@ -29,9 +29,35 @@ interface Props {
    * the default and is still hidden when Demo Mode is off.
    */
   live?: boolean;
+  /**
+   * True for a screen whose content is live ONLY WHEN A NODE IS CONFIGURED —
+   * the Phase 1 mode (fleet, shared, settings). Such a page keeps its mock
+   * rendering for Demo Mode and marks its own sections:
+   *
+   *   - mock sections carry `data-demo-content` (hidden when Demo Mode is off),
+   *   - live sections carry `data-live-content` (shown only when Demo Mode is
+   *     off AND a node config is present — see the data-node rules in
+   *     global.css),
+   *   - controls that are neither fabricated nor live (the connection form)
+   *     carry neither attribute and are always reachable,
+   *   - `<main>` gets no blanket `data-demo-content`, so the page's own
+   *     section markers decide visibility.
+   *
+   * The banner stays amber mock wording in Demo Mode and gains the emerald
+   * LIVE banner (data-notice='live-node') that global.css reveals exactly when
+   * Demo Mode is off and a config exists.
+   */
+  nodeLive?: boolean;
+  /**
+   * True for a page whose empty state is wrong even with no node configured —
+   * Settings, which carries real controls (the connection form and the Demo
+   * Mode re-enable). The demo-off empty state claims "every screen is mock",
+   * which is false on such a page, so it never shows there.
+   */
+  hideEmptyState?: boolean;
 }
 
-const { title, active, live = false } = Astro.props;
+const { title, active, live = false, nodeLive = false, hideEmptyState = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -66,6 +92,31 @@ const { title, active, live = false } = Astro.props;
           /* storage unavailable — stay on */
         }
         document.documentElement.dataset.demoMode = value;
+
+        /* NODE MODE, set the same way. 'configured' means a persisted
+           endpoint (evotitan.nodeConfig) has a host, user and port — NOT a
+           verified connection; the pages' live sections carry their own
+           per-fetch status. This is a deliberately inline copy of
+           node-config.ts's isConfigured shape: it must run before first paint
+           and cannot import modules. Keep the two in step. */
+        let node = 'none';
+        try {
+          const raw = localStorage.getItem('evotitan.nodeConfig');
+          if (raw) {
+            const c = JSON.parse(raw);
+            if (
+              c &&
+              typeof c.host === 'string' && c.host.length > 0 &&
+              typeof c.user === 'string' && c.user.length > 0 &&
+              Number.isInteger(c.port) && c.port >= 1 && c.port <= 65535
+            ) {
+              node = 'configured';
+            }
+          }
+        } catch {
+          /* corrupt or unavailable — treat as unconfigured */
+        }
+        document.documentElement.dataset.node = node;
       })();
     </script>
   </head>
@@ -103,6 +154,24 @@ const { title, active, live = false } = Astro.props;
       }
     </div>
 
+    <!--
+      THE NODE BANNER (Phase 1). Present only on nodeLive pages; global.css
+      reveals it exactly when Demo Mode is off and a node config exists, and
+      the demo rules hide the amber banner in that same state, so exactly one
+      banner ever shows. It names the MODE — the live sections below render
+      their own per-fetch status and errors, because a configured-but-down
+      node must not be described as "connected" anywhere.
+    -->
+    {nodeLive && (
+      <div
+        class="flex shrink-0 items-center justify-center gap-2 border-b border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300"
+        data-notice="live-node"
+      >
+        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true"></span>
+        LIVE DATA — this screen reads from your Dash node. Other screens are mock.
+      </div>
+    )}
+
     <div class="flex min-h-0 flex-1">
       <Sidebar active={active} needsAttention={summary.needsAttention} />
 
@@ -113,7 +182,7 @@ const { title, active, live = false } = Astro.props;
           off must take the fabrication with it — a blank pane would be
           confusing, an uncleared pane of invented numbers would be dangerous.
         -->
-        <main class="min-h-0 flex-1 overflow-y-auto" data-demo-content={live ? undefined : ''}>
+        <main class="min-h-0 flex-1 overflow-y-auto" data-demo-content={live || nodeLive ? undefined : ''}>
           <slot />
         </main>
 
@@ -128,17 +197,19 @@ const { title, active, live = false } = Astro.props;
         <div
           class="min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 text-center"
           data-when-demo="off"
-          data-when-demo-live={live ? 'hidden' : undefined}
+          data-when-demo-live={live || hideEmptyState ? 'hidden' : undefined}
         >
           <div class="max-w-md">
             <p class="text-sm font-semibold tracking-tight text-slate-200">
               Demo Mode is off
             </p>
             <p class="mt-2 text-xs leading-relaxed text-slate-500">
-              Every screen in this build is mock data — no node is connected and
-              no RPC transport exists yet. With Demo Mode off there is nothing
-              to show, so the fabricated figures are hidden rather than left on
-              screen without their warning.
+              No node is configured. The RPC transport exists and is verified
+              against a live v24.0.3 node, but every screen still shows
+              fabricated data until a node is connected — so the figures are
+              hidden rather than left on screen without their warning. Configure
+              a node in Settings to switch the fleet screens to live data, or
+              turn Demo Mode back on.
             </p>
             <button
               type="button"

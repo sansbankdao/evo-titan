@@ -1,22 +1,22 @@
 ---
 // apps/desktop/src/pages/settings.astro — Evo Titan
 //
-// Preferences and connection settings. ALL DATA IS MOCK — see src/lib/mock.ts.
-// The connection section describes what a dashd connection will need. The
-// transport now exists (src/lib/rpc.ts delegates to the Rust rpc_call) and is
-// verified against a live v24.0.3 node — but nothing in the UI invokes it, no
-// node is configured from this screen, and the fields render for layout only.
+// Preferences and connection settings. Everything EXCEPT the Connection and
+// Demo Mode sections is mock, and those two are marked below: the connection
+// form is the real Phase 1 control (persists evotitan.nodeConfig and dials the
+// node through the Rust proxy), while notifications and application remain
+// layout-only and keep their mock marking.
 import Layout from '../layouts/Layout.astro';
 import Toggle from '../components/Toggle.astro';
 import DemoModeToggle from '../components/DemoModeToggle.astro';
-import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
+import { notificationPrefs, appPrefs } from '../lib/mock';
 ---
 
-<Layout title="Settings" active="settings">
+<Layout title="Settings" active="settings" nodeLive hideEmptyState>
   <div class="mx-auto w-full max-w-4xl px-6 py-6">
     <h1 class="text-xl font-semibold tracking-tight text-white">Settings</h1>
     <p class="mt-1 text-sm text-slate-400">
-      Preferences are stored locally. Nothing on this screen is connected to a node yet.
+      Preferences are stored locally. The connection below is real; everything else is not yet.
     </p>
 
     <!--
@@ -47,28 +47,35 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
     </section>
 
     <!--
-      Connection.
+      Connection (Phase 1 — REAL).
 
-      The form is rendered DISABLED and the save button does not exist. The
-      transport is real but no client is configured from this screen yet
-      (unconfiguredRpc throws by design), so an enabled "Test connection"
-      button would be a control that cannot succeed. The values are shown so
-      the shape of the eventual form is legible, with a banner saying plainly
-      that none of it is in use.
+      The fields persist to localStorage (evotitan.nodeConfig) and "Test
+      connection" dials the node through the shipped Rust proxy
+      (src-tauri/src/rpc.rs) using the verified pure client (rpc-core.ts).
+      The endpoint is the operator's own dashd. The RPC password never leaves
+      this machine and is persisted only when "remember" is ticked — the same
+      storage model dashd itself uses for dash.conf (see node-config.ts for the
+      reasoning and the keyring upgrade seam).
+
+      TLS and timeout stay informational, not controls: the proxy speaks
+      http:// to the node (endpointFor in rpc-core.ts) and enforces its own
+      30 s timeout (rpc.rs), so editable fields for either would be controls
+      that cannot succeed.
     -->
     <section class="mt-6 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="connection">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-sm font-semibold text-slate-200">Connection</h2>
         <span
           class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300"
-          data-connection-status="not-implemented"
+          data-connection-status="none"
         >
-          RPC not implemented
+          Not configured
         </span>
       </div>
       <p class="mt-1 text-xs leading-relaxed text-slate-500">
-        These are the fields a dashd connection will need. They are shown for layout only —
-        nothing is dialled, and the values below are not read by any code yet.
+        Point Evo Titan at your own dashd. Defaults to the testnet RPC port
+        (19998; mainnet is 9998 — sourced from chainparamsbase.cpp:42-45 at v24.0.3).
+        Live screens read this endpoint; every other screen stays mock.
       </p>
 
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -76,19 +83,23 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
           <span class="text-xs tracking-wide text-slate-500 uppercase">Host</span>
           <input
             type="text"
-            value={rpcSettings.host}
-            disabled
-            class="mt-1 w-full cursor-not-allowed rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-400"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="127.0.0.1"
+            data-conn-host
+            class="mt-1 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
           />
         </label>
 
         <label class="block" data-setting="port">
           <span class="text-xs tracking-wide text-slate-500 uppercase">Port</span>
           <input
-            type="text"
-            value={rpcSettings.port}
-            disabled
-            class="mt-1 w-full cursor-not-allowed rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-400"
+            type="number"
+            min="1"
+            max="65535"
+            placeholder="19998"
+            data-conn-port
+            class="mt-1 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
           />
         </label>
 
@@ -96,27 +107,35 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
           <span class="text-xs tracking-wide text-slate-500 uppercase">RPC user</span>
           <input
             type="text"
-            value={rpcSettings.user}
-            disabled
-            class="mt-1 w-full cursor-not-allowed rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-400"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="dashrpc"
+            data-conn-user
+            class="mt-1 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
           />
         </label>
 
         <label class="block" data-setting="password">
           <span class="text-xs tracking-wide text-slate-500 uppercase">RPC password</span>
           <!--
-            The password is never rendered, not even as a mock value. The field
-            shows only whether one is set, so no secret-looking string is ever
-            put on screen where it could be mistaken for a stored credential.
+            The password is never rendered back, not even as dots, so no
+            secret-looking string is ever put on screen where it could be
+            mistaken for a stored credential. Empty means "enter it again".
           -->
           <input
             type="password"
-            value={rpcSettings.passwordSet ? '••••••••••••' : ''}
-            disabled
-            class="mt-1 w-full cursor-not-allowed rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-400"
+            autocomplete="new-password"
+            placeholder="••••••••"
+            data-conn-password
+            class="mt-1 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
           />
-          <span class="mt-0.5 block text-xs text-slate-600">
-            {rpcSettings.passwordSet ? 'A password is set for this profile' : 'No password set'}
+          <span class="mt-0.5 flex items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              data-conn-remember
+              class="size-3.5 accent-titan-500"
+            />
+            Remember on this device (stored like dash.conf stores it — see the note above)
           </span>
         </label>
 
@@ -124,7 +143,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
           <span class="text-xs tracking-wide text-slate-500 uppercase">TLS</span>
           <input
             type="text"
-            value={rpcSettings.tls ? 'Enabled' : 'Disabled'}
+            value="http:// only — fixed by the Rust proxy"
             disabled
             class="mt-1 w-full cursor-not-allowed rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-400"
           />
@@ -134,7 +153,7 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
           <span class="text-xs tracking-wide text-slate-500 uppercase">Timeout</span>
           <input
             type="text"
-            value={`${rpcSettings.timeoutMs.toLocaleString()} ms`}
+            value="30,000 ms — fixed in rpc.rs"
             disabled
             class="mt-1 w-full cursor-not-allowed rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-400"
           />
@@ -144,25 +163,45 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
       <div class="mt-4 flex flex-wrap gap-2 border-t border-titan-800 pt-3">
         <button
           type="button"
-          disabled
-          class="cursor-not-allowed rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-500"
-          title="No RPC transport exists yet"
-        >
-          Test connection
-        </button>
-        <button
-          type="button"
-          disabled
-          class="cursor-not-allowed rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-500"
-          title="Nothing is persisted yet"
+          data-conn-save
+          class="cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20"
         >
           Save
         </button>
+        <button
+          type="button"
+          data-conn-clear
+          class="cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200"
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          data-conn-test
+          class="cursor-pointer rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20"
+        >
+          Test connection
+        </button>
+      </div>
+
+      <!--
+        Test result. Shown only after the user asks for it, and labelled with
+        what it is: a live read from the node, made just now. The deployment
+        table is getdeploymentinfo — the v24 method; a pre-v24 node answers
+        -32601 and that error is shown here verbatim rather than hidden.
+      -->
+      <div class="mt-4 hidden rounded-md border border-titan-800 bg-titan-950/60 p-3" data-test-result>
+        <p class="text-xs font-medium text-slate-300" data-test-summary></p>
+        <div class="mt-2 max-h-64 overflow-y-auto" data-deployments></div>
       </div>
     </section>
 
     <!-- Notifications -->
-    <section class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="notifications">
+    <section
+      class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4"
+      data-section="notifications"
+      data-demo-content
+    >
       <h2 class="text-sm font-semibold text-slate-200">Notifications</h2>
       <p class="mt-0.5 text-xs text-slate-500">
         Delivery is not implemented — no mail or push transport exists yet.
@@ -173,7 +212,11 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
     </section>
 
     <!-- Application -->
-    <section class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-section="application">
+    <section
+      class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4"
+      data-section="application"
+      data-demo-content
+    >
       <h2 class="text-sm font-semibold text-slate-200">Application</h2>
       <p class="mt-0.5 text-xs text-slate-500">
         Only settings that already affect this build are enabled. Demo Mode, above, is the one
@@ -211,3 +254,192 @@ import { rpcSettings, notificationPrefs, appPrefs } from '../lib/mock';
     </section>
   </div>
 </Layout>
+
+<script>
+  // The Connection section's wiring. Everything runs against the pure modules
+  // under src/lib, which are under node --test; this script only moves DOM.
+  import { RpcError } from '../lib/rpc';
+  import { liveRpc } from '../lib/live-rpc';
+  import {
+    loadNodeConfig,
+    saveNodeConfig,
+    clearNodeConfig,
+    setSessionPassword,
+    clearSessionPassword,
+    isConfigured,
+    type NodeConfig,
+  } from '../lib/node-config';
+  import { deploymentRows, formatCoreVersion, type DeploymentInfo } from '../lib/deployments';
+
+  const storage = window.localStorage;
+  const $ = <T extends Element = HTMLElement>(sel: string): T | null => document.querySelector<T>(sel);
+
+  const hostIn = $<HTMLInputElement>('[data-conn-host]');
+  const portIn = $<HTMLInputElement>('[data-conn-port]');
+  const userIn = $<HTMLInputElement>('[data-conn-user]');
+  const passIn = $<HTMLInputElement>('[data-conn-password]');
+  const rememberIn = $<HTMLInputElement>('[data-conn-remember]');
+  const badge = $('[data-connection-status]');
+  const testBtn = $<HTMLButtonElement>('[data-conn-test]');
+  const resultPanel = $('[data-test-result]');
+  const testSummary = $('[data-test-summary]');
+  const deployBox = $('[data-deployments]');
+
+  type BadgeState = 'none' | 'configured' | 'checking' | 'ok' | 'error';
+
+  /** The badge is one element restyled per state; classes are spelled out so no
+      Tailwind runtime is involved. */
+  function setBadge(state: BadgeState, text: string): void {
+    if (!badge) return;
+    badge.setAttribute('data-connection-status', state);
+    badge.textContent = text;
+    badge.className = [
+      'rounded-full border px-2 py-0.5 text-xs font-medium',
+      state === 'ok'
+        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+        : state === 'error'
+          ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+          : state === 'checking'
+            ? 'border-titan-500/30 bg-titan-500/10 text-titan-200'
+            : state === 'configured'
+              ? 'border-titan-500/30 bg-titan-500/10 text-titan-200'
+              : 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+    ].join(' ');
+  }
+
+  /** The chrome that other pages and the status bar key off. */
+  function refreshChrome(): void {
+    const cfg = loadNodeConfig(storage);
+    document.documentElement.dataset.node = cfg ? 'configured' : 'none';
+    const label = document.querySelector('[data-node-label]');
+    if (label) label.textContent = cfg ? `Node endpoint: ${cfg.host}:${cfg.port}` : 'No node configured';
+    const dot = document.querySelector('[data-node-dot]');
+    if (dot) {
+      if (cfg) dot.classList.replace('bg-slate-600', 'bg-titan-400');
+      else dot.classList.replace('bg-titan-400', 'bg-slate-600');
+    }
+    const source = document.querySelector('[data-setting="data-source"]');
+    if (source) {
+      const demo = document.documentElement.dataset.demoMode !== 'off';
+      if (demo) {
+        source.textContent = 'Mock';
+        source.className = 'font-mono text-amber-400/80';
+      } else if (cfg) {
+        source.textContent = `Live — ${cfg.host}:${cfg.port}`;
+        source.className = 'font-mono text-emerald-400/90';
+      } else {
+        source.textContent = 'None';
+        source.className = 'font-mono text-slate-500';
+      }
+    }
+    setBadge(cfg ? 'configured' : 'none', cfg ? `Configured — ${cfg.host}:${cfg.port}` : 'Not configured');
+  }
+
+  /** Populate the form from what is stored. The password is never echoed. */
+  function fillForm(): void {
+    const cfg = loadNodeConfig(storage);
+    if (hostIn) hostIn.value = cfg?.host ?? '';
+    if (portIn) portIn.value = cfg ? String(cfg.port) : '';
+    if (userIn) userIn.value = cfg?.user ?? '';
+    if (passIn) passIn.value = '';
+    if (rememberIn) rememberIn.checked = (cfg?.password ?? '').length > 0;
+  }
+
+  function readForm(): NodeConfig | null {
+    const port = Number.parseInt(portIn?.value ?? '', 10);
+    const candidate: NodeConfig = {
+      host: (hostIn?.value ?? '').trim(),
+      port,
+      user: (userIn?.value ?? '').trim(),
+      password: passIn?.value ?? '',
+    };
+    return isConfigured(candidate) ? candidate : null;
+  }
+
+  $<HTMLButtonElement>('[data-conn-save]')?.addEventListener('click', () => {
+    const cfg = readForm();
+    if (!cfg) {
+      setBadge('error', 'Host, port and RPC user are required');
+      return;
+    }
+    const remember = rememberIn?.checked === true;
+    // Not remembered: persist without the password, keep it session-only.
+    const toStore: NodeConfig = remember ? cfg : { ...cfg, password: '' };
+    if (!saveNodeConfig(storage, toStore)) {
+      setBadge('error', 'Could not persist the settings (storage refused)');
+      return;
+    }
+    if (remember) {
+      setSessionPassword(cfg.password);
+    } else if (cfg.password.length > 0) {
+      setSessionPassword(cfg.password);
+    } else {
+      clearSessionPassword();
+    }
+    fillForm();
+    refreshChrome();
+  });
+
+  $<HTMLButtonElement>('[data-conn-clear]')?.addEventListener('click', () => {
+    clearNodeConfig(storage);
+    clearSessionPassword();
+    fillForm();
+    refreshChrome();
+    if (resultPanel) resultPanel.classList.add('hidden');
+  });
+
+  testBtn?.addEventListener('click', async () => {
+    const client = liveRpc(storage);
+    if (!client) {
+      setBadge('error', 'Save a host, port and RPC user first');
+      return;
+    }
+    setBadge('checking', 'Testing…');
+    if (testBtn) testBtn.disabled = true;
+    try {
+      // Two calls: getnetworkinfo proves auth + version, getdeploymentinfo
+      // gives the tip height and the activation table. A pre-v24 node answers
+      // -32601 for the second and the error is shown verbatim, not hidden.
+      const info = await client.call<{ version: number; subversion: string }>('getnetworkinfo');
+      const dep = await client.call<DeploymentInfo>('getdeploymentinfo');
+      setBadge('ok', `Connected — ${formatCoreVersion(info.version)} at height ${dep.height}`);
+      if (testSummary) {
+        testSummary.textContent =
+          `Dash Core ${formatCoreVersion(info.version)} (${info.subversion}) — ` +
+          `chain tip ${dep.height}, ${dep.hash.slice(0, 12)}…`;
+      }
+      if (deployBox) {
+        const rows = deploymentRows(dep);
+        deployBox.replaceChildren(
+          ...rows.map((r) => {
+            const row = document.createElement('p');
+            row.className = 'flex items-center justify-between gap-2 py-0.5 font-mono text-xs';
+            const left = document.createElement('span');
+            left.className = r.active ? 'text-slate-300' : 'text-slate-500';
+            left.textContent = `${r.id}${r.ehf ? ' (EHF)' : ''}`;
+            const right = document.createElement('span');
+            right.className = r.active
+              ? 'text-emerald-400/90'
+              : r.status === 'started' || r.status === 'locked_in'
+                ? 'text-titan-300'
+                : 'text-slate-500';
+            right.textContent = r.active ? `active since ${r.since}` : r.status;
+            row.append(left, right);
+            return row;
+          }),
+        );
+      }
+      if (resultPanel) resultPanel.classList.remove('hidden');
+    } catch (e) {
+      const msg = e instanceof RpcError ? e.message : String(e);
+      setBadge('error', 'Unreachable');
+      if (testSummary) testSummary.textContent = msg;
+      if (resultPanel) resultPanel.classList.remove('hidden');
+    } finally {
+      if (testBtn) testBtn.disabled = false;
+    }
+  });
+
+  fillForm();
+  refreshChrome();
+</script>

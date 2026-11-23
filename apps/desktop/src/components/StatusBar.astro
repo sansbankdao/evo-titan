@@ -1,10 +1,14 @@
 ---
 // apps/desktop/src/components/StatusBar.astro — Evo Titan
 //
-// Bottom chrome. Every value is MOCK. The connection indicator is hardcoded to
-// "not connected" because `rpc.ts` has no transport and no node was reachable
-// when this was written — showing "connected" would be a lie the UI tells.
+// Bottom chrome. The node counts on the right are MOCK and vanish with Demo
+// Mode. The connection indicator on the left is REAL as of Phase 1: it reads
+// the persisted endpoint (evotitan.nodeConfig) and reports PRESENCE, not a
+// verified connection — "Node endpoint: host:port" with an indigo dot is the
+// honest ceiling for a bar that makes no RPC call. Claiming "connected" here
+// would be a lie the UI tells.
 import { summary } from '../lib/mock';
+import { loadNodeConfig } from '../lib/node-config';
 
 // Kept in step with tauri.conf.json by hand: the webview cannot read the
 // bundle version, and importing package.json into the client bundle would ship
@@ -18,11 +22,11 @@ const appVersion = '26.9.26';
 >
   <div class="flex items-center gap-4">
     <span class="flex items-center gap-1.5">
-      <span class="h-1.5 w-1.5 rounded-full bg-slate-600" aria-hidden="true"></span>
-      <span>No node connected</span>
+      <span class="h-1.5 w-1.5 rounded-full bg-slate-600" data-node-dot aria-hidden="true"></span>
+      <span data-node-label>No node configured</span>
     </span>
     <span class="text-slate-700">·</span>
-    <span>RPC not implemented</span>
+    <span>RPC transport verified (v24.0.3)</span>
   </div>
 
   <!--
@@ -44,3 +48,16 @@ const appVersion = '26.9.26';
     <span class="text-slate-600">v{appVersion}</span>
   </div>
 </footer>
+
+<script>
+  // Presence, not connection (see the header comment). One storage read, no
+  // RPC call, so the bar can never report a state it did not check.
+  import { loadNodeConfig } from '../lib/node-config';
+  const cfg = loadNodeConfig(window.localStorage);
+  const label = document.querySelector('[data-node-label]');
+  if (cfg && label) {
+    label.textContent = `Node endpoint: ${cfg.host}:${cfg.port}`;
+    const dot = document.querySelector('[data-node-dot]');
+    dot?.classList.replace('bg-slate-600', 'bg-titan-400');
+  }
+</script>

@@ -130,3 +130,47 @@ body {
 [data-demo-mode='off'] [data-when-demo-live='hidden'] {
   display: none;
 }
+
+/*
+ * LIVE NODE MODE (Phase 1, 2026-11-23).
+ *
+ * `html[data-node]` is set before first paint by the same inline script in
+ * Layout.astro that sets `data-demo-mode`, from the presence of a persisted
+ * node config (evotitan.nodeConfig). It carries 'configured' or 'none' — never
+ * 'connected', because presence of a config is not a verified connection and
+ * the UI must not claim one.
+ *
+ * The states compose with Demo Mode like this:
+ *
+ *   demo on                     — mock banner, mock screens, live sections
+ *                                 hidden (Demo Mode's contract is fabricated
+ *                                 data, and mixing the two would defeat the
+ *                                 banner).
+ *   demo off, no node           — banner and mock hidden, empty state (unchanged).
+ *   demo off, node configured   — the emerald node banner shows, live sections
+ *                                 show, the empty state hides (a screen that
+ *                                 has real data must not claim it has none).
+ *
+ * Per-section errors inside a live area (node unreachable, wallet disabled)
+ * are rendered by the page scripts as their own state — the banner names the
+ * MODE, the sections carry the truth about each fetch.
+ */
+[data-notice='live-node'] {
+  display: none;
+}
+
+[data-demo-mode='off'][data-node='configured'] [data-notice='live-node'] {
+  display: flex;
+}
+
+[data-node='none'] [data-live-content],
+[data-demo-mode='on'] [data-live-content] {
+  display: none;
+}
+
+/* Hides the demo-off empty state once there is real data to show. The three
+ * attribute selectors outweigh the two in the demo-off rule above, so this
+ * wins on specificity, not source order. */
+[data-demo-mode='off'][data-node='configured'] [data-when-demo='off'] {
+  display: none;
+}
