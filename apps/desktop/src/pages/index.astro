@@ -114,13 +114,23 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
       </div>
 
       <section class="mt-5 rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-dapi-card>
-        <h2 class="text-sm font-semibold text-slate-200">Network status — DAPI</h2>
+        <h2 class="text-sm font-semibold text-slate-200">Network status — DAPI + Core</h2>
         <p class="mt-0.5 text-xs text-slate-500">
-          Read live from dapi.sansbank.dev (our proxy — SDK method names, shapes adapted on our
-          side), with the public testnet seed as fallback. No local node needed.
+          DAPI rows read dapi.sansbank.dev (our proxy — SDK method names, shapes adapted on our
+          side), testnet falling back to the public seed. Deployment rows read
+          core.sansbank.dev/core-info — the public Core-RPC surface carrying
+          v24 / evo_shares activation state per network. No local node needed.
         </p>
         <p class="mt-2 font-mono text-xs text-slate-300" data-dapi-testnet>Reading…</p>
         <p class="mt-1 font-mono text-xs text-slate-400" data-dapi-mainnet>Reading…</p>
+        <!--
+          Deployment rows from core.sansbank.dev/core-info — the public
+          Core-RPC surface carrying v24 / evo_shares activation state per
+          network. Emerald when a network's v24 is ACTIVE: that is the row that
+          says the shared-masternode feature is live there.
+        -->
+        <p class="mt-2 border-t border-titan-800 pt-2 font-mono text-xs text-emerald-300/90" data-coreinfo-testnet>Reading…</p>
+        <p class="mt-1 font-mono text-xs text-slate-400" data-coreinfo-mainnet>Reading…</p>
       </section>
 
       <div class="mt-6 overflow-hidden rounded-lg border border-titan-800">
@@ -415,6 +425,7 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
   import { deploymentRows, formatCoreVersion, type DeploymentInfo } from '../lib/deployments';
   import { loadNodeConfig } from '../lib/node-config';
   import { fetchSansbankStatus, type SansbankStatusView } from '../lib/dapi-sansbank';
+  import { fetchCoreInfo, type CoreInfoView } from '../lib/core-info';
 
   const storage = window.localStorage;
   const $ = <T extends Element = HTMLElement>(sel: string): T | null => document.querySelector<T>(sel);
@@ -617,7 +628,49 @@ const sorted = [...fleet].sort((a, b) => healthOrder[a.health] - healthOrder[b.h
     }
   }
 
+  /*
+    The deployment rows — core.sansbank.dev/core-info for both networks.
+    This is the public source that settled the project's open item: testnet
+    v24 ACTIVE since 1,578,000 (measured 2026-11-23). Rendered per network
+    from the same deploymentRows normalisation the node-driven panel uses.
+  */
+  async function readCoreInfo(): Promise<void> {
+    const render = (el: Element | null, label: string, v: CoreInfoView): void => {
+      if (!el) return;
+      const v24 = v.deployments.find((r) => r.id === 'v24');
+      const evo = v.deployments.find((r) => r.id === 'evo_shares');
+      const describe = (status: string | undefined, since: number | undefined): string =>
+        status === 'active'
+          ? `ACTIVE since ${(since ?? 0).toLocaleString()}`
+          : status === 'defined'
+            ? 'defined'
+            : `${status ?? '?'} since ${(since ?? 0).toLocaleString()}`;
+      el.textContent =
+        `${label} — v24 ${describe(v24?.status, v24?.since)} · ` +
+        `evo_shares ${describe(evo?.status, evo?.since)}${evo?.ehf ? ' (EHF-gated)' : ''} · ` +
+        `core ${v.coreVersion} at height ${v.height.toLocaleString()} · via core.sansbank.dev`;
+    };
+    const targets: Array<{ el: Element | null; label: string; network: 'mainnet' | 'testnet' }> = [
+      { el: $('[data-coreinfo-testnet]'), label: 'Testnet', network: 'testnet' },
+      { el: $('[data-coreinfo-mainnet]'), label: 'Mainnet', network: 'mainnet' },
+    ];
+    for (const t of targets) {
+      try {
+        const v = await fetchCoreInfo(t.network, async (url) => {
+          const res = await fetch(url);
+          return await res.text();
+        });
+        render(t.el, t.label, v);
+      } catch (e) {
+        if (t.el) {
+          t.el.textContent = `${t.label} — could not read core.sansbank.dev: ${(e as Error).message}`;
+        }
+      }
+    }
+  }
+
   $('[data-live-refresh]')?.addEventListener('click', () => void loadFleet());
   void loadFleet();
   void readSansbankStatus();
+  void readCoreInfo();
 </script>

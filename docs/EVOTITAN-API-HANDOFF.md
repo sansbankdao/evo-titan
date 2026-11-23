@@ -130,10 +130,14 @@ verified plumbing carries it:
 
 ## 6. Open verification items (blocking, in order)
 
-1. **Testnet v24 deployment state.** Needs `getdeploymentinfo` from an
-   operated testnet v24 node — no public endpoint exposes it. Until then the
-   testnet pilot cannot be scheduled and "testnet is live" must NOT be claimed
-   anywhere.
+1. **Testnet v24 deployment state — CLOSED 2026-11-23.** Verified ACTIVE
+   since core height 1,578,000 via
+   `https://core.sansbank.dev/core-info?network=testnet` (Sansbank's public
+   read-only Core-RPC surface, shipped by the DAPI team that day; evo_shares
+   `defined`). The original text follows for the record: it needed
+   `getdeploymentinfo` from an operated testnet node and no public endpoint
+   exposed it; the pilot may now be scheduled, and "testnet v24 is active"
+   may be claimed — with the height cited.
 2. **Mainnet activation watch.** Re-read the numbers after the window ending
    ~2026-11-28 (block 2,580,480): sample block versions via blockchair
    (`dash/dashboards/block/<height>` carries `version_hex`; bit 13 = `0x2000`).

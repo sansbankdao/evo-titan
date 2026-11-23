@@ -265,6 +265,18 @@ try {
     /Mainnet — DAPI .+ core chain height [0-9,]+ .+ via dapi\.sansbank\.dev/.test(dapiM),
     dapiM,
   );
+  const ciT = await pollEval(cdp, `(() => { const t = document.querySelector('[data-coreinfo-testnet]')?.textContent || ''; return t && !t.includes('Reading') ? t : null; })()`);
+  check(
+    'fleet: core.sansbank.dev — testnet v24 ACTIVE since 1,578,000',
+    /Testnet — v24 ACTIVE since 1,578,000 .+ evo_shares defined \(EHF-gated\) .+ via core\.sansbank\.dev/.test(ciT),
+    ciT,
+  );
+  const ciM = await pollEval(cdp, `(() => { const t = document.querySelector('[data-coreinfo-mainnet]')?.textContent || ''; return t && !t.includes('Reading') ? t : null; })()`);
+  check(
+    'fleet: core.sansbank.dev — mainnet v24 status rendered live',
+    /Mainnet — v24 (started|locked_in|active)( since [0-9,]+)? .+ evo_shares defined .+ core 24\.0\.\d+ .+ via core\.sansbank\.dev/.test(ciM),
+    ciM,
+  );
 
   // ----- /shared/ — the live share table -----
   console.log('\n== /shared/ (live mode) ==');
