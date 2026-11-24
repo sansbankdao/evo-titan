@@ -1,7 +1,7 @@
 // apps/desktop/src/lib/rpc.ts — Evo Titan
 //
 // ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  THE TRANSPORT IS NOW REAL, BUT NOTHING IN THE UI CALLS IT.              ║
+// ║  THE TRANSPORT IS REAL AND THE UI CALLS IT (Phases 1-2, 2026-11-23).     ║
 // ║                                                                          ║
 // ║  This file adds only the environment-specific pieces: the Tauri          ║
 // ║  transport (which delegates to src-tauri/src/rpc.rs because the webview  ║
@@ -14,10 +14,11 @@
 // ║  same code, rather than a second implementation that merely resembles    ║
 // ║  the first. See rpc-core.test.ts.                                        ║
 // ║                                                                          ║
-// ║  The UI still reads mock.ts. Every page keeps its non-dismissible        ║
-// ║  "MOCK DATA — no node connected" banner, and `unconfiguredRpc` still    ║
-// ║  throws, so a page accidentally wired to a live call fails visibly       ║
-// ║  rather than appearing to work.                                          ║
+// ║  Since Phase 1 the live screens reach this transport through             ║
+// ║  src/lib/live-rpc.ts (fleet, shared, settings, assemble, signing) —      ║
+// ║  never by importing it directly. Demo Mode still renders the mock pages  ║
+// ║  and their banner; `unconfiguredRpc` still throws by design, and a page  ║
+// ║  without a configured node shows the error, never fabricated data.       ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
 import { RpcError, type RpcHttpResponse, type RpcTransport } from './rpc-core';
