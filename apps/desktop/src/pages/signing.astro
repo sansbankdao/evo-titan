@@ -1,12 +1,14 @@
 ---
 // apps/desktop/src/pages/signing.astro — Evo Titan
 //
-// Signature collection. ALL DATA IS MOCK — see src/lib/mock.ts.
+// THE PHASE 2 OWNER SIDE. In live mode this screen imports a coordinator's
+// session envelope, shows the node's decoded terms for the owner to verify
+// (their own share, with their own amount and addresses — the node help's own
+// instruction before consenting), runs `protx shared_sign` against the
+// operator's wallet, and exports the signature file to return.
 //
-// Mirrors the SharedSigCollector workflow in Dash Core v24's Qt client: a
-// session envelope is circulated, each share owner signs, and every signature
-// is verified before it is counted. The human-checkable code exists so
-// participants can confirm out-of-band that they are signing the same session.
+// The mock section below (Demo Mode) keeps the SharedSigCollector-shaped
+// layout preview, unchanged.
 import Layout from '../layouts/Layout.astro';
 import { pendingSignings } from '../lib/mock';
 
@@ -18,8 +20,126 @@ const humanise = (kind: string): string =>
   })[kind] ?? kind;
 ---
 
-<Layout title="Signing" active="signing">
+<Layout title="Signing" active="signing" nodeLive>
   <div class="mx-auto w-full max-w-4xl px-6 py-6">
+    <!--
+      LIVE — the owner side of consent collection. Import the envelope the
+      coordinator sent, verify the terms, sign with the connected wallet, hand
+      the signature file back. Nothing here broadcasts anything.
+    -->
+    <div data-live-content>
+      <h1 class="text-xl font-semibold tracking-tight text-white">Sign a shared registration</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        Owner side of consent collection. Your wallet signs with every share-owner key it holds.
+      </p>
+
+      <section class="mt-5 rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">1 · Import the session envelope</h2>
+        <p class="mt-1 text-xs leading-relaxed text-slate-500">
+          Paste the envelope the coordinator sent (JSON). Nothing is trusted until the consent
+          hash and the share table decode cleanly.
+        </p>
+        <textarea
+          rows="4"
+          spellcheck="false"
+          placeholder='{"kind": "evo-titan.shared-registration-session", …}'
+          data-sign-envelope
+          class="mt-2 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
+        ></textarea>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            data-sign-load
+            class="cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20"
+          >
+            Load envelope
+          </button>
+          <label class="cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200">
+            Open .json file
+            <input
+              type="file"
+              accept="application/json,.json"
+              class="hidden"
+              data-sign-file
+            />
+          </label>
+        </div>
+        <div class="mt-2 hidden rounded-md border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300" data-sign-error></div>
+      </section>
+
+      <section class="mt-4 hidden rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-sign-session>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-semibold text-slate-200">2 · Verify, then consent</h2>
+          <p class="font-mono text-xs text-emerald-300/90" data-sign-network></p>
+        </div>
+        <!--
+          The consent hash is the human-checkable code of this flow: confirm it
+          with the coordinator over a channel you trust before signing. The mock
+          screen's "everyone must be signing the same session" is this, real.
+        -->
+        <p class="selectable mt-2 font-mono text-sm font-semibold tracking-wider text-titan-300" data-sign-consent></p>
+        <p class="mt-1 text-xs text-slate-500">
+          Confirm this hash with the coordinator before signing. The terms below are the NODE's
+          decoded registration — not the coordinator's claims.
+        </p>
+        <div class="mt-3 grid gap-3 sm:grid-cols-3">
+          <div class="rounded-md border border-titan-800 bg-titan-950/60 p-3">
+            <p class="text-xs tracking-wide text-slate-500 uppercase">Operator cut</p>
+            <p class="mt-1 font-mono text-sm text-slate-200" data-sign-cut></p>
+          </div>
+          <div class="rounded-md border border-titan-800 bg-titan-950/60 p-3">
+            <p class="text-xs tracking-wide text-slate-500 uppercase">Early exit</p>
+            <p class="mt-1 font-mono text-sm text-slate-200" data-sign-exit></p>
+          </div>
+          <div class="rounded-md border border-titan-800 bg-titan-950/60 p-3">
+            <p class="text-xs tracking-wide text-slate-500 uppercase">Shares</p>
+            <p class="mt-1 font-mono text-sm text-slate-200" data-sign-sharecount></p>
+          </div>
+        </div>
+        <ul class="mt-3 divide-y divide-titan-800 rounded-md border border-titan-800" role="list" data-sign-shares></ul>
+        <button
+          type="button"
+          data-sign-run
+          class="mt-3 cursor-pointer rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20"
+        >
+          protx shared_sign
+        </button>
+      </section>
+
+      <section class="mt-4 hidden rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-sign-result>
+        <h2 class="text-sm font-semibold text-slate-200">3 · Your signature file</h2>
+        <p class="mt-1 text-xs leading-relaxed text-slate-500">
+          Return this file to the coordinator. It is a consent signature for this session only —
+          it signs nothing on chain and broadcasts nothing.
+        </p>
+        <p class="mt-2 font-mono text-xs text-emerald-300/90" data-sign-covered></p>
+        <pre
+          class="selectable mt-2 max-h-56 overflow-auto rounded-md border border-titan-800 bg-titan-950/80 p-3 font-mono text-xs text-slate-400"
+          data-sign-artifact
+        ></pre>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            data-sign-copy
+            class="cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200"
+          >
+            Copy signature file
+          </button>
+          <button
+            type="button"
+            data-sign-download
+            class="cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200"
+          >
+            Download .json
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!--
+      THE MOCK PAGE (Demo Mode) — the layout preview, unchanged.
+    -->
+    <div data-demo-content>
     <h1 class="text-xl font-semibold tracking-tight text-white">Signing</h1>
     <p class="mt-1 text-sm text-slate-400">
       Transactions awaiting co-owner signatures. Every signature is verified before it counts.
@@ -141,10 +261,150 @@ const humanise = (kind: string): string =>
     }
 
     <p class="mt-6 text-xs leading-relaxed text-slate-600">
-      MOCK DATA. Signing is not implemented: the transport exists (src/lib/rpc.ts) and the
-      shared_* surface has been exercised against a regtest node, but no signing path is wired to
-      this UI and no wallet holds keys here. The buttons above are disabled for that reason, not to
-      gate anything.
+      MOCK DATA. The signing flow itself is implemented above in live mode (envelope import →
+      shared_sign → signature file); this panel keeps the fabricated layout preview. No wallet
+      holds keys in the mock, and the buttons here stay disabled for that reason, not to gate
+      anything.
     </p>
+    </div>
   </div>
 </Layout>
+
+<script>
+  // The owner flow. Pure decode/validate lives in coordination.ts (tested);
+  // this script renders and calls the node. Errors are shown verbatim.
+  import { liveRpc } from '../lib/live-rpc';
+  import { RpcError } from '../lib/rpc';
+  import { duffsToDash } from '../lib/fleet-live';
+  import {
+    decodeEnvelope,
+    buildSignatureArtifacts,
+    encodeSignatureArtifact,
+    type SessionEnvelope,
+    type SignatureArtifact,
+  } from '../lib/coordination';
+
+  const storage = window.localStorage;
+  const $ = <T extends Element = HTMLElement>(sel: string): T | null => document.querySelector<T>(sel);
+
+  let envelope: SessionEnvelope | null = null;
+  let artifact: SignatureArtifact | null = null;
+
+  function showError(message: string): void {
+    const box = $('[data-sign-error]');
+    if (!box) return;
+    if (!message) {
+      box.classList.add('hidden');
+      box.replaceChildren();
+      return;
+    }
+    box.classList.remove('hidden');
+    box.textContent = message;
+  }
+
+  function loadEnvelope(raw: string): void {
+    showError('');
+    try {
+      envelope = decodeEnvelope(raw);
+    } catch (e) {
+      envelope = null;
+      showError((e as Error).message);
+      return;
+    }
+    const section = $('[data-sign-session]');
+    section?.classList.remove('hidden');
+    $('[data-sign-result]')?.classList.add('hidden');
+    const set = (sel: string, text: string): void => {
+      const el = $(sel);
+      if (el) el.textContent = text;
+    };
+    set('[data-sign-network]', `network: ${envelope.network}`);
+    set('[data-sign-consent]', envelope.prepare.consentHash);
+    set('[data-sign-cut]', `${envelope.prepare.terms.operatorReward}% of the gross node reward`);
+    const period = envelope.prepare.terms.earlyPeriodBlocks ?? 0;
+    const penaltyDuffs = envelope.prepare.terms.earlyPenalty ?? 0;
+    set(
+      '[data-sign-exit]',
+      period === 0
+        ? 'no early period — free exit'
+        : `after ${(period * 150) / 86400} days, penalty ${duffsToDash(penaltyDuffs)} DASH`,
+    );
+    set('[data-sign-sharecount]', `${envelope.prepare.terms.shares.length} shares`);
+    if (envelope.prepare.warning) showError(`node warning: ${envelope.prepare.warning}`);
+
+    const list = $('[data-sign-shares]');
+    if (list) {
+      list.replaceChildren(
+        ...envelope.prepare.terms.shares.map((s, i) => {
+          const li = document.createElement('li');
+          li.className = 'flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-xs';
+          li.setAttribute('data-sign-share', String(i));
+          li.innerHTML = `
+            <span class="w-14 shrink-0 font-mono text-slate-500">#${i}</span>
+            <span class="font-mono text-slate-300">${duffsToDash(s.amount).toLocaleString()} DASH</span>
+            <span class="selectable font-mono text-slate-600" title="refund">refund ${s.refundAddress}</span>
+            <span class="selectable font-mono text-slate-600" title="reward">reward ${s.rewardAddress}</span>
+            <span class="selectable font-mono text-slate-600" title="owner">owner ${s.ownerAddress}</span>`;
+          return li;
+        }),
+      );
+    }
+  }
+
+  $('[data-sign-load]')?.addEventListener('click', () => {
+    const box = $('[data-sign-envelope]') as HTMLTextAreaElement | null;
+    if (box) loadEnvelope(box.value);
+  });
+
+  $('[data-sign-file]')?.addEventListener('change', (ev) => {
+    const file = (ev.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    void file.text().then((raw) => {
+      const box = $('[data-sign-envelope]') as HTMLTextAreaElement | null;
+      if (box) box.value = raw;
+      loadEnvelope(raw);
+    });
+  });
+
+  $('[data-sign-run]')?.addEventListener('click', async () => {
+    if (!envelope) return;
+    const client = liveRpc(storage);
+    if (!client) {
+      showError('no node configured — signing needs the wallet that holds your share-owner key');
+      return;
+    }
+    try {
+      showError('');
+      const reply = await client.sharedSign(envelope.prepare.tx);
+      artifact = buildSignatureArtifacts(envelope.network, envelope.prepare.consentHash, reply);
+      $('[data-sign-result]')?.classList.remove('hidden');
+      const covered = $('[data-sign-covered]');
+      if (covered) {
+        covered.textContent = `signed share indices: ${reply.signatures.map((s) => s.shareIndex).join(', ')}`;
+      }
+      const pre = $('[data-sign-artifact]');
+      if (pre) pre.textContent = encodeSignatureArtifact(artifact);
+    } catch (e) {
+      showError(e instanceof RpcError ? e.message : String(e));
+    }
+  });
+
+  $('[data-sign-copy]')?.addEventListener('click', async () => {
+    if (!artifact) return;
+    try {
+      await navigator.clipboard.writeText(encodeSignatureArtifact(artifact));
+    } catch {
+      /* clipboard unavailable — the <pre> is selectable */
+    }
+  });
+
+  $('[data-sign-download]')?.addEventListener('click', () => {
+    if (!artifact) return;
+    const blob = new Blob([encodeSignatureArtifact(artifact)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `evo-titan-signature-${artifact.consentHash.slice(0, 8)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+</script>

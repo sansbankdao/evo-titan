@@ -41,23 +41,32 @@ const FIXTURES = {
   blockchaininfo: fixture('blockchaininfo'),
   deploymentinfo: fixture('deploymentinfo'),
   protx_list_wallet: fixture('protx_list_wallet'),
+  prepare: fixture('shared_register_prepare'),
+  sign: fixture('shared_sign'),
 };
 
 /** The pre-paint init script: stub the Tauri invoke + seed the two keys. */
 const INIT = `
 (() => {
   const F = ${JSON.stringify(FIXTURES)};
+  let addrCounter = 0;
   const replies = {
     getnetworkinfo: F.networkinfo,
     getblockchaininfo: F.blockchaininfo,
     getdeploymentinfo: F.deploymentinfo,
     'protx list': F.protx_list_wallet,
+    'protx shared_register_prepare': F.prepare,
+    'protx shared_sign': F.sign,
+    listunspent: [{ txid: 'a'.repeat(64), vout: 0, amount: 1500, spendable: true }],
+    createrawtransaction: 'funding-tx-hex',
+    getnewaddress: () => 'yGenerated' + (addrCounter++) ,
+    'bls generate': { secret: 'b'.repeat(64), public: F.prepare.terms.pubKeyOperator, scheme: 'basic' },
   };
   window.__TAURI_INTERNALS__ = {
     invoke: async (cmd, args) => {
       if (cmd !== 'rpc_call') throw new Error('harness: unexpected command ' + cmd);
       const env = JSON.parse(args.request.body);
-      const key = env.method === 'protx' ? 'protx ' + env.params[0] : env.method;
+      const key = env.method === 'protx' ? 'protx ' + env.params[0] : env.method === 'bls' ? 'bls generate' : env.method;
       const fx = replies[key];
       if (fx === undefined) {
         return {
@@ -66,7 +75,8 @@ const INIT = `
           elapsedMs: 1,
         };
       }
-      return { status: 200, body: JSON.stringify({ result: fx, error: null, id: env.id }), elapsedMs: 1 };
+      const value = typeof fx === 'function' ? fx() : fx;
+      return { status: 200, body: JSON.stringify({ result: value, error: null, id: env.id }), elapsedMs: 1 };
     },
   };
   try {
@@ -330,6 +340,79 @@ try {
   check('settings: Test connection -> Connected — 24.0.3 at height 501', (post.badge ?? '').includes('Connected — 24.0.3 at height 501'), post.badge);
   check('settings: subversion shown verbatim', (post.summary ?? '').includes('/Dash Core:24.0.3/'), post.summary);
   check('settings: deployment panel renders evo_shares as EHF-gated and inactive', /evo_shares \(EHF\)/.test(post.deploys) && /defined/.test(post.deploys), post.deploys);
+
+  // ----- Phase 2: the coordination flow, /assemble/ -> /signing/ -> back -----
+  console.log('\n== /assemble/ -> /signing/ (coordination flow) ==');
+  await navigate(cdp, `${BASE}/assemble/`);
+  await pollEval(cdp, `document.querySelector('[data-asm-endpoint]')?.textContent.includes('127.0.0.1:19998')`);
+  // Two default 500/500 rows ship with the page; type the addresses.
+  const rowsReady = await pollEval(cdp, `document.querySelectorAll('[data-asm-share]').length === 2`);
+  check('assemble: opens with two 500 DASH share rows summing to the collateral', rowsReady === true);
+  await evalIn(cdp, `
+    (() => {
+      const rows = [...document.querySelectorAll('[data-asm-share]')];
+      rows[0].querySelector('[data-asm-refund]').value = 'yRefundA';
+      rows[0].querySelector('[data-asm-owner]').value  = 'yOwnerA';
+      rows[1].querySelector('[data-asm-refund]').value = 'yRefundB';
+      rows[1].querySelector('[data-asm-owner]').value  = 'yOwnerB';
+      return true;
+    })()
+  `);
+  await evalIn(cdp, `document.querySelector('[data-asm-gen-voting]').click()`);
+  await pollEval(cdp, `document.querySelector('[data-asm-voting]')?.value.startsWith('yGenerated')`);
+  check('assemble: voting address generated from the wallet (getnewaddress stub)', true);
+  await evalIn(cdp, `document.querySelector('[data-asm-gen-opkey]').click()`);
+  await pollEval(cdp, `document.querySelector('[data-asm-opkey]')?.value.length > 90`);
+  check('assemble: operator BLS key generated (bls generate stub)', true);
+  await evalIn(cdp, `document.querySelector('[data-asm-prepare]').click()`);
+  const envelopeText = await pollEval(cdp, `document.querySelector('[data-asm-envelope]')?.textContent || ''`);
+  check(
+    'assemble: prepare -> envelope with the captured consent hash 8cc717d8…',
+    envelopeText.includes('8cc717d857f3a131') && envelopeText.includes('evo-titan.shared-registration-session'),
+    envelopeText.slice(0, 120),
+  );
+  check(
+    'assemble: envelope carries the node terms (3 shares, 10% cut)',
+    envelopeText.includes('"shares"') && envelopeText.includes('"operatorReward": 10'),
+    '',
+  );
+
+  // Owner side: import the envelope, verify the node's terms, sign.
+  await navigate(cdp, `${BASE}/signing/`);
+  await evalIn(
+    cdp,
+    `(() => { document.querySelector('[data-sign-envelope]').value = ${JSON.stringify(envelopeText)}; return true; })()`,
+  );
+  await evalIn(cdp, `document.querySelector('[data-sign-load]').click()`);
+  const consentShown = await pollEval(cdp, `document.querySelector('[data-sign-consent]')?.textContent || ''`);
+  check('signing: envelope decodes and shows the consent hash to verify', consentShown.includes('8cc717d857f3a131'), consentShown);
+  const shareRows = await pollEval(cdp, `document.querySelectorAll('[data-sign-share]').length`);
+  check('signing: the NODE terms render — 3 share rows (500/300/200 DASH)', shareRows === 3, String(shareRows));
+  const cutShown = await evalIn(cdp, `document.querySelector('[data-sign-cut]')?.textContent || ''`);
+  check('signing: operator cut shown from the node terms', cutShown.includes('10%'), cutShown);
+  await evalIn(cdp, `document.querySelector('[data-sign-run]').click()`);
+  const artifactText = await pollEval(cdp, `document.querySelector('[data-sign-artifact]')?.textContent || ''`);
+  check(
+    'signing: shared_sign -> signature file with all three captured signatures',
+    artifactText.includes('evo-titan.shared-registration-signature') &&
+      artifactText.includes('8cc717d857f3a131') &&
+      (artifactText.match(/"shareIndex"/g) ?? []).length === 3,
+    artifactText.slice(0, 120),
+  );
+  const covered = await evalIn(cdp, `document.querySelector('[data-sign-covered]')?.textContent || ''`);
+  check('signing: signed share indices reported (0, 1, 2)', covered.includes('0, 1, 2'), covered);
+
+  // Coordinator side again: the session restored from storage, import the signature.
+  await navigate(cdp, `${BASE}/assemble/`);
+  const restored = await pollEval(cdp, `document.querySelector('[data-asm-envelope]')?.textContent || ''`);
+  check('assemble: session restored after navigating away and back', restored.includes('8cc717d857f3a131'), restored.slice(0, 80));
+  await evalIn(
+    cdp,
+    `(() => { document.querySelector('[data-asm-sig-import]').value = ${JSON.stringify(artifactText)}; return true; })()`,
+  );
+  await evalIn(cdp, `document.querySelector('[data-asm-sig-load]').click()`);
+  const collected = await pollEval(cdp, `document.querySelector('[data-asm-collection]')?.textContent || ''`);
+  check('assemble: signature imported — collection complete 3/3', collected.includes('complete — 3/3'), collected);
 
   // ----- demo-ON default (fresh storage) — the mock contract still holds -----
   console.log('\n== / (demo mode on, no node) ==');

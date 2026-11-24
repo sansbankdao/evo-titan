@@ -1,0 +1,576 @@
+---
+// apps/desktop/src/pages/assemble.astro — Evo Titan
+//
+// PHASE 2 — the coordinator's pool assembly. Reached from the live Shared
+// screen ("Create shared node"). Everything runs against the operator's own
+// node through the verified transport; the pure assembly/validation/envelope
+// logic lives in src/lib/coordination.ts and is under node --test.
+//
+// The flow: define the share table and terms -> shared_register_prepare on the
+// connected node (funding inputs built from that wallet's UTXOs) -> export the
+// SESSION ENVELOPE (a JSON document: tx + consentHash + decoded terms) to each
+// owner by any channel the coordinator chooses -> import the owners' signature
+// files -> watch the collection. No server is involved at any point.
+//
+// What is deliberately NOT here: combine/broadcast — Phase 3. The signatures
+// are collected and verified; execution ships separately, and the screen says
+// so rather than pretending.
+import Layout from '../layouts/Layout.astro';
+import { MIN_SHARES, MAX_SHARES } from '../lib/coordination.ts';
+---
+
+<Layout title="Assemble shared node" active="shared" nodeLive hideEmptyState>
+  <div class="mx-auto w-full max-w-4xl px-6 py-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-white">Assemble a shared node</h1>
+        <p class="mt-1 text-sm text-slate-400">
+          Pool assembly and consent collection — coordinator side. Reading
+          <span class="font-mono text-xs" data-asm-endpoint>…</span>
+        </p>
+      </div>
+      <a
+        href="/shared/"
+        class="rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200"
+      >
+        Back to Shared
+      </a>
+    </div>
+
+    <!-- 1. Share table -->
+    <section class="mt-5 rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-200">1 · Share table</h2>
+        <p class="font-mono text-xs text-slate-500">
+          sums to <span data-asm-sum>0</span> of 1,000 DASH
+        </p>
+      </div>
+      <p class="mt-1 text-xs leading-relaxed text-slate-500">
+        {MIN_SHARES}–{MAX_SHARES} shares, each at least 100 DASH (providertx.h:58,
+        :142-143), summing to exactly the 1,000 DASH collateral. Addresses can be typed or
+        generated from the connected wallet. The node enforces every rule; these checks are
+        early warnings, not the source of truth.
+      </p>
+
+      <div class="mt-3 space-y-2" data-asm-shares></div>
+
+      <button
+        type="button"
+        data-asm-share-add
+        class="mt-2 cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200"
+      >
+        + Add share
+      </button>
+    </section>
+
+    <!-- 2. Terms -->
+    <section class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+      <h2 class="text-sm font-semibold text-slate-200">2 · Terms fixed at registration</h2>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        <label class="block">
+          <span class="text-xs tracking-wide text-slate-500 uppercase">Operator cut (%, our fee)</span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value="10"
+            data-asm-cut
+            class="mt-1 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
+          />
+        </label>
+        <label class="block">
+          <span class="text-xs tracking-wide text-slate-500 uppercase">Voting address</span>
+          <div class="mt-1 flex gap-2">
+            <input
+              type="text"
+              spellcheck="false"
+              placeholder="generate from wallet"
+              data-asm-voting
+              class="w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
+            />
+            <button
+              type="button"
+              data-asm-gen-voting
+              class="shrink-0 cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-200"
+            >
+              Generate
+            </button>
+          </div>
+        </label>
+        <label class="block">
+          <span class="text-xs tracking-wide text-slate-500 uppercase">Early period (blocks)</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value="10000"
+            data-asm-period
+            class="mt-1 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
+          />
+          <span class="mt-0.5 block text-xs text-slate-600" data-asm-period-days></span>
+        </label>
+        <label class="block">
+          <span class="text-xs tracking-wide text-slate-500 uppercase">Early-exit penalty (DASH)</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value="10"
+            data-asm-penalty
+            class="mt-1 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
+          />
+          <span class="mt-0.5 block text-xs text-slate-600">zero penalty = free early exit for anyone</span>
+        </label>
+        <label class="block sm:col-span-2">
+          <span class="text-xs tracking-wide text-slate-500 uppercase">Operator BLS public key</span>
+          <div class="mt-1 flex gap-2">
+            <input
+              type="text"
+              spellcheck="false"
+              placeholder="generate (bls generate)"
+              data-asm-opkey
+              class="w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
+            />
+            <button
+              type="button"
+              data-asm-gen-opkey
+              class="shrink-0 cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-200"
+            >
+              Generate
+            </button>
+          </div>
+        </label>
+      </div>
+    </section>
+
+    <!-- 3. Prepare -->
+    <section class="mt-4 rounded-lg border border-titan-800 bg-titan-900/60 p-4">
+      <h2 class="text-sm font-semibold text-slate-200">3 · Prepare on the node</h2>
+      <p class="mt-1 text-xs leading-relaxed text-slate-500">
+        Funding inputs are built from the connected wallet's UTXOs (1,000 DASH + fee) and the
+        consent digest binds them. Nothing is broadcast — prepare returns an UNSIGNED
+        transaction that every share owner must consent to.
+      </p>
+      <button
+        type="button"
+        data-asm-prepare
+        class="mt-2 cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20"
+      >
+        shared_register_prepare
+      </button>
+      <div class="mt-2 hidden rounded-md border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300" data-asm-errors></div>
+    </section>
+
+    <!-- 4. Envelope + collection -->
+    <section class="mt-4 hidden rounded-lg border border-titan-800 bg-titan-900/60 p-4" data-asm-session>
+      <h2 class="text-sm font-semibold text-slate-200">4 · Session envelope & signature collection</h2>
+      <p class="mt-1 text-xs leading-relaxed text-slate-500">
+        Send the envelope to every share owner (file, clipboard, any channel). Each owner signs
+        it in Evo Titan's Signing screen against their own wallet and returns a signature file.
+        Import them below; the consent hash must match or the signature is refused.
+      </p>
+      <p class="mt-2 font-mono text-xs text-emerald-300/90" data-asm-consent></p>
+      <pre
+        class="selectable mt-2 max-h-56 overflow-auto rounded-md border border-titan-800 bg-titan-950/80 p-3 font-mono text-xs text-slate-400"
+        data-asm-envelope></pre>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          data-asm-copy
+          class="cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200"
+        >
+          Copy envelope
+        </button>
+        <button
+          type="button"
+          data-asm-download
+          class="cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200"
+        >
+          Download .json
+        </button>
+      </div>
+
+      <div class="mt-4 border-t border-titan-800 pt-3">
+        <p class="text-xs tracking-wide text-slate-500 uppercase">Owner signatures</p>
+        <textarea
+          rows="3"
+          spellcheck="false"
+          placeholder="paste a signature file (JSON) here"
+          data-asm-sig-import
+          class="mt-2 w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500"
+        ></textarea>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            data-asm-sig-load
+            class="cursor-pointer rounded-md border border-titan-500/40 bg-titan-500/10 px-3 py-1.5 text-xs font-medium text-titan-200 hover:bg-titan-500/20"
+          >
+            Import signature
+          </button>
+        </div>
+        <p class="mt-2 font-mono text-xs text-slate-300" data-asm-collection>no signatures yet</p>
+      </div>
+      <p class="mt-3 text-xs leading-relaxed text-slate-600" data-asm-phase3>
+        Combine, funding-input signing and broadcast are Phase 3 — this screen collects and
+        verifies signatures; execution ships separately and nothing is broadcast today.
+      </p>
+    </section>
+  </div>
+</Layout>
+
+<script>
+  // The coordinator flow. All decisions run through src/lib/coordination.ts
+  // (tested); this script only moves DOM and calls the node through the live
+  // client. Node errors are rendered verbatim — the node is the source of
+  // truth, not this form.
+  import { liveRpc } from '../lib/live-rpc';
+  import { RpcError } from '../lib/rpc';
+  import { loadNodeConfig } from '../lib/node-config';
+  import {
+    MIN_SHARES,
+    MAX_SHARES,
+    REGULAR_COLLATERAL_DUFFS,
+    validateAssembly,
+    formatOperatorReward,
+    buildEnvelope,
+    encodeEnvelope,
+    decodeEnvelope,
+    decodeSignatureArtifact,
+    collectSignatures,
+    type SessionEnvelope,
+    type SignatureArtifact,
+    type ShareInput,
+  } from '../lib/coordination';
+
+  const BLOCK_SECONDS = 150; // sourced: src/chainparams.cpp:200 (v24.0.3)
+
+  const storage = window.localStorage;
+  const $ = <T extends Element = HTMLElement>(sel: string): T | null => document.querySelector<T>(sel);
+
+  const client = liveRpc(storage);
+  const cfg = loadNodeConfig(storage);
+  const endpointEl = $('[data-asm-endpoint]');
+  if (endpointEl) endpointEl.textContent = client && cfg ? `${cfg.host}:${cfg.port}` : 'no node configured';
+
+  let envelope: SessionEnvelope | null = null;
+  const artifacts: SignatureArtifact[] = [];
+
+  /*
+    Session persistence. The in-progress envelope and the collected
+    signatures survive navigation (same machine, same window) under
+    evotitan.assemblySession — a coordinator switching to Signing and back
+    must not lose the pool they just prepared. Restoring is best-effort: a
+    corrupt or foreign blob is discarded, never rendered.
+  */
+  const SESSION_KEY = 'evotitan.assemblySession';
+
+  function persistSession(): void {
+    if (!envelope) return;
+    try {
+      storage.setItem(SESSION_KEY, JSON.stringify({ envelope, artifacts }));
+    } catch {
+      /* storage full or blocked — the on-screen <pre> is the fallback */
+    }
+  }
+
+  function restoreSession(): void {
+    let raw: string | null = null;
+    try {
+      raw = storage.getItem(SESSION_KEY);
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as { envelope?: unknown; artifacts?: SignatureArtifact[] };
+      const env = decodeEnvelope(JSON.stringify(parsed.envelope));
+      envelope = env;
+      artifacts.length = 0;
+      for (const a of parsed.artifacts ?? []) artifacts.push(decodeSignatureArtifact(JSON.stringify(a)));
+      renderSession();
+    } catch {
+      try {
+        storage.removeItem(SESSION_KEY);
+      } catch {
+        /* nothing to clear */
+      }
+    }
+  }
+
+  // ---------- share table ----------
+
+  interface Row {
+    root: HTMLElement;
+    amount: HTMLInputElement;
+    refund: HTMLInputElement;
+    owner: HTMLInputElement;
+  }
+
+  const rowsBox = $('[data-asm-shares]');
+
+  function readRows(): ShareInput[] {
+    return [...(rowsBox?.querySelectorAll('[data-asm-share]') ?? [])].map((r) => {
+      const amount = Number.parseFloat((r.querySelector('[data-asm-amount]') as HTMLInputElement)?.value ?? '');
+      const reward = (r.querySelector('[data-asm-reward]') as HTMLInputElement)?.value.trim();
+      return {
+        amountDuffs: Number.isFinite(amount) ? Math.round(amount * 1e8) : NaN,
+        refundAddress: (r.querySelector('[data-asm-refund]') as HTMLInputElement)?.value.trim() ?? '',
+        ownerAddress: (r.querySelector('[data-asm-owner]') as HTMLInputElement)?.value.trim() ?? '',
+        rewardAddress: reward?.length ? reward : undefined,
+      };
+    });
+  }
+
+  function refreshSum(): void {
+    const sum = readRows().reduce((t, s) => t + (Number.isFinite(s.amountDuffs) ? s.amountDuffs : 0), 0);
+    const sumEl = $('[data-asm-sum]');
+    if (sumEl) sumEl.textContent = (sum / 1e8).toLocaleString();
+    const period = Number.parseInt(($('[data-asm-period]') as HTMLInputElement)?.value ?? '0', 10);
+    const days = Number.isFinite(period) ? (period * BLOCK_SECONDS) / 86400 : 0;
+    const daysEl = $('[data-asm-period-days]');
+    if (daysEl) daysEl.textContent = `≈ ${days.toLocaleString(undefined, { maximumFractionDigits: 1 })} days at 150 s per block`;
+  }
+
+  async function genAddress(input: HTMLInputElement | null): Promise<void> {
+    if (!client || !input) return;
+    try {
+      input.value = (await client.call<string>('getnewaddress')) as string;
+    } catch (e) {
+      showErrors([`getnewaddress failed: ${(e as Error).message}`]);
+    }
+  }
+
+  function addShareRow(): void {
+    if (!rowsBox) return;
+    if (rowsBox.querySelectorAll('[data-asm-share]').length >= MAX_SHARES) return;
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-1 gap-2 sm:grid-cols-12';
+    row.setAttribute('data-asm-share', '');
+    const index = rowsBox.querySelectorAll('[data-asm-share]').length;
+    row.innerHTML = `
+      <input type="number" min="100" step="0.01" placeholder="amount DASH" data-asm-amount
+        class="sm:col-span-2 rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500" />
+      <div class="sm:col-span-4 flex gap-1">
+        <input type="text" spellcheck="false" placeholder="refund address (immutable)" data-asm-refund
+          class="w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500" />
+        <button type="button" data-asm-gen-refund class="shrink-0 cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-2 py-1.5 text-xs text-slate-500 hover:text-slate-200" title="generate from the connected wallet">↺</button>
+      </div>
+      <div class="sm:col-span-4 flex gap-1">
+        <input type="text" spellcheck="false" placeholder="owner key address" data-asm-owner
+          class="w-full rounded-md border border-titan-800 bg-titan-950/60 px-2.5 py-1.5 font-mono text-xs text-slate-200 outline-none focus:border-titan-500" />
+        <button type="button" data-asm-gen-owner class="shrink-0 cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-2 py-1.5 text-xs text-slate-500 hover:text-slate-200" title="generate from the connected wallet">↺</button>
+      </div>
+      <button type="button" data-asm-share-remove class="sm:col-span-2 cursor-pointer rounded-md border border-titan-800 bg-titan-900 px-2 py-1.5 text-xs text-rose-400/80 hover:text-rose-300" title="remove share">remove</button>
+    `;
+    (row.querySelector('[data-asm-amount]') as HTMLInputElement).addEventListener('input', refreshSum);
+    row.querySelector('[data-asm-gen-refund]')?.addEventListener('click', (ev) => {
+      void genAddress(row.querySelector('[data-asm-refund]'));
+      (ev as MouseEvent).preventDefault();
+    });
+    row.querySelector('[data-asm-gen-owner]')?.addEventListener('click', (ev) => {
+      void genAddress(row.querySelector('[data-asm-owner]'));
+      (ev as MouseEvent).preventDefault();
+    });
+    row.querySelector('[data-asm-share-remove]')?.addEventListener('click', () => {
+      if (rowsBox.querySelectorAll('[data-asm-share]').length > MIN_SHARES) {
+        row.remove();
+        refreshSum();
+      }
+    });
+    rowsBox.append(row);
+    if (index === 0) (row.querySelector('[data-asm-amount]') as HTMLInputElement).value = '500';
+    if (index === 1) (row.querySelector('[data-asm-amount]') as HTMLInputElement).value = '500';
+    refreshSum();
+  }
+
+  $('[data-asm-share-add]')?.addEventListener('click', addShareRow);
+  addShareRow();
+  addShareRow();
+  $('[data-asm-period]')?.addEventListener('input', refreshSum);
+
+  // ---------- generators ----------
+
+  $('[data-asm-gen-voting]')?.addEventListener('click', () =>
+    void genAddress($('[data-asm-voting]') as HTMLInputElement | null),
+  );
+  $('[data-asm-gen-opkey]')?.addEventListener('click', async () => {
+    if (!client) return;
+    try {
+      const key = await client.generateOperatorKey();
+      const input = $('[data-asm-opkey]') as HTMLInputElement | null;
+      if (input) input.value = key.public;
+    } catch (e) {
+      showErrors([`bls generate failed: ${(e as Error).message}`]);
+    }
+  });
+
+  // ---------- errors ----------
+
+  function showErrors(messages: string[]): void {
+    const box = $('[data-asm-errors]');
+    if (!box) return;
+    if (messages.length === 0) {
+      box.classList.add('hidden');
+      box.replaceChildren();
+      return;
+    }
+    box.classList.remove('hidden');
+    box.replaceChildren(...messages.map((m) => {
+      const p = document.createElement('p');
+      p.textContent = m;
+      return p;
+    }));
+  }
+
+  // ---------- prepare ----------
+
+  function readTerms() {
+    const cut = Number.parseFloat(($('[data-asm-cut]') as HTMLInputElement)?.value ?? '');
+    const period = Number.parseInt(($('[data-asm-period]') as HTMLInputElement)?.value ?? '', 10);
+    const penalty = Number.parseFloat(($('[data-asm-penalty]') as HTMLInputElement)?.value ?? '');
+    return {
+      shares: readRows(),
+      operatorPubKey: ($('[data-asm-opkey]') as HTMLInputElement)?.value.trim() ?? '',
+      votingAddress: ($('[data-asm-voting]') as HTMLInputElement)?.value.trim() ?? '',
+      operatorRewardPercent: Number.isFinite(cut) ? formatOperatorReward(cut) : String(cut),
+      earlyPeriodBlocks: Number.isFinite(period) ? period : NaN,
+      earlyPenaltyDuffs: Number.isFinite(penalty) ? Math.round(penalty * 1e8) : NaN,
+      coreP2PAddrs: '',
+    };
+  }
+
+  async function currentNetwork(): Promise<string> {
+    if (!client) return 'unknown';
+    const info = await client.call<{ chain: string }>('getblockchaininfo');
+    return info.chain;
+  }
+
+  $('[data-asm-prepare]')?.addEventListener('click', async () => {
+    showErrors([]);
+    const terms = readTerms();
+    const problems = validateAssembly(terms);
+    if (problems.length > 0) {
+      showErrors(problems);
+      return;
+    }
+    if (!client) {
+      showErrors(['no node configured — nothing was prepared']);
+      return;
+    }
+    const button = $('[data-asm-prepare]') as HTMLButtonElement | null;
+    if (button) button.disabled = true;
+    try {
+      // Funding inputs from the connected wallet: pick UTXOs past the
+      // collateral + fee, change back to a fresh address. The consent digest
+      // binds these inputs; Phase 3 signs them at broadcast time.
+      const changeAddr = (await client.call<string>('getnewaddress')) as string;
+      const unspent = (await client.call<Array<{ txid: string; vout: number; amount: number; spendable: boolean }>>(
+        'listunspent',
+        [1, 999999999],
+      )) as Array<{ txid: string; vout: number; amount: number; spendable: boolean }>;
+      const inputs: Array<{ txid: string; vout: number }> = [];
+      let total = 0;
+      for (const u of unspent) {
+        if (!u.spendable) continue;
+        inputs.push({ txid: u.txid, vout: u.vout });
+        total += u.amount;
+        if (total > REGULAR_COLLATERAL_DUFFS / 1e8 + 0.001) break;
+      }
+      if (total < REGULAR_COLLATERAL_DUFFS / 1e8) {
+        throw new Error(
+          `the wallet holds only ${total.toLocaleString()} DASH of spendable UTXOs — a 1,000 DASH collateral is needed`,
+        );
+      }
+      const fee = 0.0001;
+      const funding = (await client.call<string>('createrawtransaction', [
+        inputs,
+        { [changeAddr]: Math.round((total - REGULAR_COLLATERAL_DUFFS / 1e8 - fee) * 1e8) / 1e8 },
+      ])) as string;
+
+      const prepare = await client.sharedRegisterPrepare(
+        funding,
+        terms.shares,
+        terms.coreP2PAddrs,
+        terms.operatorPubKey,
+        terms.votingAddress,
+        terms.operatorRewardPercent,
+        terms.earlyPeriodBlocks,
+        terms.earlyPenaltyDuffs,
+      );
+      const network = await currentNetwork();
+      envelope = buildEnvelope(network, prepare, terms);
+      persistSession();
+      renderSession();
+    } catch (e) {
+      showErrors([e instanceof RpcError ? e.message : String(e)]);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
+
+  // ---------- session + collection ----------
+
+  function renderCollection(): void {
+    const el = $('[data-asm-collection]');
+    if (!el || !envelope) return;
+    const state = collectSignatures(envelope.prepare.terms.shares.length, envelope.prepare.consentHash, artifacts);
+    el.textContent = state.complete
+      ? `complete — ${state.collected.length}/${envelope.prepare.terms.shares.length} signatures collected`
+      : `${state.collected.length}/${envelope.prepare.terms.shares.length} collected — missing share indices: ${state.missing.join(', ') || '—'}` +
+        (state.refused.length ? ` · refused ${state.refused.length} signature(s) for another session` : '') +
+        (state.duplicates.length ? ` · ${state.duplicates.length} duplicate(s) ignored` : '');
+    el.classList.toggle('text-emerald-300/90', state.complete);
+  }
+
+  function renderSession(): void {
+    const section = $('[data-asm-session]');
+    if (!section || !envelope) return;
+    section.classList.remove('hidden');
+    const consentEl = $('[data-asm-consent]');
+    if (consentEl) consentEl.textContent = `consentHash ${envelope.prepare.consentHash} — every owner signs THIS`;
+    const pre = $('[data-asm-envelope]');
+    if (pre) pre.textContent = encodeEnvelope(envelope);
+    if (envelope.prepare.warning) {
+      showErrors([`node warning: ${envelope.prepare.warning}`]);
+    }
+    renderCollection();
+  }
+
+  $('[data-asm-copy]')?.addEventListener('click', async () => {
+    if (!envelope) return;
+    try {
+      await navigator.clipboard.writeText(encodeEnvelope(envelope));
+    } catch {
+      /* clipboard unavailable — the <pre> is selectable as the fallback */
+    }
+  });
+
+  $('[data-asm-download]')?.addEventListener('click', () => {
+    if (!envelope) return;
+    const blob = new Blob([encodeEnvelope(envelope)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `evo-titan-session-${envelope.prepare.consentHash.slice(0, 8)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $('[data-asm-sig-load]')?.addEventListener('click', () => {
+    const box = $('[data-asm-sig-import]') as HTMLTextAreaElement | null;
+    if (!box || !envelope) return;
+    try {
+      const artifact = decodeSignatureArtifact(box.value);
+      artifacts.push(artifact);
+      box.value = '';
+      showErrors([]);
+    } catch (e) {
+      showErrors([(e as Error).message]);
+    }
+    persistSession();
+    renderCollection();
+  });
+
+  refreshSum();
+  restoreSession();
+</script>

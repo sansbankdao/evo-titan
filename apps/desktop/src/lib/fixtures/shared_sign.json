@@ -1,0 +1,56 @@
+{
+  "type": "registration",
+  "terms": {
+    "version": 3,
+    "type": 0,
+    "collateralHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "collateralIndex": 1,
+    "addresses": {},
+    "votingAddress": "yZ2FpC3VGEwMq55z47DuwzB6C63nXuEeKh",
+    "shares": [
+      {
+        "amount": 50000000000,
+        "refundAddress": "yM3i3kGZixoJvPhhmW2jDqkpfDq4sPekC4",
+        "refundScript": "76a91407fe286c950a1dfc4dcc51f4415b1aeb9a3b9a1088ac",
+        "rewardAddress": "yM3i3kGZixoJvPhhmW2jDqkpfDq4sPekC4",
+        "rewardScript": "76a91407fe286c950a1dfc4dcc51f4415b1aeb9a3b9a1088ac",
+        "ownerAddress": "yat4ZvpCbeeKA62jxrMWh2rPv2nMnUknu2"
+      },
+      {
+        "amount": 30000000000,
+        "refundAddress": "yiUEwcLzkSBsPpj9r2wLgEv9hmn1qtZApe",
+        "refundScript": "76a914f2fc92560bbc39e4e90a51123709e1c1511ec1e588ac",
+        "rewardAddress": "yiUEwcLzkSBsPpj9r2wLgEv9hmn1qtZApe",
+        "rewardScript": "76a914f2fc92560bbc39e4e90a51123709e1c1511ec1e588ac",
+        "ownerAddress": "ySMBVWATDXjbTekg6XoDk3GTheeENwAQuh"
+      },
+      {
+        "amount": 20000000000,
+        "refundAddress": "yT8UBaeyVQPqCP8aGL4wsWi1ygnNCWFpHU",
+        "refundScript": "76a9144ab56b26c6e88ea60984bf67a90975ea35df79f588ac",
+        "rewardAddress": "yT8UBaeyVQPqCP8aGL4wsWi1ygnNCWFpHU",
+        "rewardScript": "76a9144ab56b26c6e88ea60984bf67a90975ea35df79f588ac",
+        "ownerAddress": "yirUA4ShPj3vpYFr2QTNcEKH3vZod9Dym1"
+      }
+    ],
+    "earlyPeriodBlocks": 10000,
+    "earlyPenalty": 1000000000,
+    "pubKeyOperator": "897b4f98b167fe44d53b8f54ebcceb165c6013ad9e5b4aa3f70b6de61b0c091a89d1efbed88ac6ea34b6a02dea0631b5",
+    "operatorReward": 10,
+    "inputsHash": "7a59fb1567c6815c08e983a36512118a71a4e98e123171b675f078c54782dfad"
+  },
+  "signatures": [
+    {
+      "shareIndex": 0,
+      "signature": "H3akj4RoaDt1l8fqylYan+mUbhdF36TpiDjK2tR8kC0/b5BPjHXy1EMbVfs0ggsnmSo1it5LY3sDGidPv9GThqo="
+    },
+    {
+      "shareIndex": 1,
+      "signature": "H3Gm+PAOerCvRIEIKmpxJu741iRsby8K74DYlgMsqTzbDuE4OlYj7w6VGCnplNMzCw9sO13X+OFur5Rb1dPinuk="
+    },
+    {
+      "shareIndex": 2,
+      "signature": "H73GJualfmzDs09CpD+oelnNPbJdsxqjYYmtFNKhPnJhLurLxz6ymVvwYRSJCQh3JiqczR2IRWrqsgkF9IBISjk="
+    }
+  ]
+}
